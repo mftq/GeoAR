@@ -13,10 +13,8 @@
   <!-- google fonts for the UI -->
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
+  <!-- fix camera -->
   <script>
-    // we intercept the camera request before ar.js makes it
-    // this forces the phone to use the wide angle lens at zoom 1
-    // without this the S23 defaults to the telephoto lens and it looks zoomed in and cut off
     var originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = function(constraints) {
       if (constraints && constraints.video) {
@@ -59,14 +57,22 @@
       color: var(--text);
     }
 
-    /* this forces the camera video to fill the whole screen */
-    /* without this it shows as a small box in the corner */
+    /* force the camera video behind everything */
     video {
       position: fixed !important;
       top: 0 !important; left: 0 !important;
       width: 100vw !important; height: 100vh !important;
       object-fit: cover !important;
       z-index: 0 !important;
+    }
+
+    /* the AR canvas must be above the video but below the UI */
+    canvas {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      z-index: 1 !important;
+      pointer-events: none !important;
     }
 
     /* UI sits on top of everything */
@@ -921,15 +927,31 @@ window.addEventListener('load', () => {
   const check = setInterval(() => {
     const v = document.querySelector('video');
     if (v) {
-      // force the video to cover the full screen
+      // video goes behind the 3D canvas
       v.style.width     = '100vw';
       v.style.height    = '100vh';
       v.style.objectFit = 'cover';
       v.style.position  = 'fixed';
       v.style.top       = '0';
       v.style.left      = '0';
-      v.style.zIndex    = '-1';
-      clearInterval(check); // stop checking once we found it
+      v.style.zIndex    = '0';
+      clearInterval(check);
+    }
+  }, 100);
+
+  // force the AR canvas to sit above the video
+  const checkCanvas = setInterval(() => {
+    // ar.js creates a canvas for rendering the 3D shapes
+    // we need it above the video (z-index 1) but below the UI (z-index 10)
+    const allCanvases = document.querySelectorAll('canvas');
+    if (allCanvases.length > 0) {
+      allCanvases.forEach(c => {
+        c.style.position = 'fixed';
+        c.style.top      = '0';
+        c.style.left     = '0';
+        c.style.zIndex   = '1';
+      });
+      clearInterval(checkCanvas);
     }
   }, 100);
 });
