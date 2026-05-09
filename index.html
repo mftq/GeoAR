@@ -14,9 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
   <script>
-    // we intercept the camera request before ar.js makes it
-    // this forces the phone to use the wide angle lens at zoom 1
-    // without this the S23 defaults to the telephoto lens and it looks zoomed in and cut off
+    // this script fixes the camera so it fills the screen correctly on mobile
     var originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = function(constraints) {
       if (constraints && constraints.video) {
@@ -373,13 +371,13 @@
     <a-entity id="shapeEntity"></a-entity>
 
     <!-- shape name shown above the shape - position set by JS based on shape size -->
-    <a-text id="shapeLabel" value="" align="center" color="#06B6D4" scale="0.4 0.4 0.4" position="0 1.5 0"></a-text>
+    <a-text id="shapeLabel" value="" align="center" color="#06B6D4" scale="0.7 0.7 0.7" position="0 1.5 0"></a-text>
 
     <!-- dimensions shown below the name -->
-    <a-text id="dimLabel" value="" align="center" color="#ffffff" scale="0.28 0.28 0.28" position="0 1.25 0"></a-text>
+    <a-text id="dimLabel" value="" align="center" color="#ffffff" scale="0.5 0.5 0.5" position="0 1.25 0"></a-text>
 
     <!-- calculated result shown at the bottom of the label stack -->
-    <a-text id="resultLabel" value="" align="center" color="#10B981" scale="0.28 0.28 0.28" position="0 1.05 0"></a-text>
+    <a-text id="resultLabel" value="" align="center" color="#10B981" scale="0.5 0.5 0.5" position="0 1.05 0"></a-text>
 
   </a-marker>
 
