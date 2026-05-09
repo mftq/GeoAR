@@ -492,7 +492,7 @@ const SHAPES = {
     // what inputs to ask the user for
     inputs: [{ key:'a', label:'Side Length (cm)', placeholder:'5' }],
     // the html to create the 3d shape in the AR scene
-    aframe: (v) => `<a-box width="${v.a*0.1}" height="${v.a*0.1}" depth="${v.a*0.1}" color="#2563EB" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-box>`,
+    aframe: (v) => `<a-box width="${v.a*0.1}" height="${v.a*0.1}" depth="${v.a*0.1}" color="#2563EB" opacity="0.85" position="0 0.5 0"></a-box>`,
     // calculate all measurements
     stats: (v) => {
       const a = +v.a;
@@ -516,9 +516,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A cube has 6 faces, 12 edges, and 8 vertices — it is a special case of a rectangular prism where all sides are equal.',
-      '💡 The cube is one of the 5 Platonic solids. Its dual polyhedron is the octahedron.',
-      '💡 A Rubik\'s cube is made of 26 smaller cubes and has 43 quintillion possible configurations!',
+      '💡 A cube has 6 flat faces, 12 edges, and 8 corners. Every single face is a perfect square!',
+      '💡 A Rubik\'s Cube is a famous cube puzzle. Even though it looks simple, it has more than 43 quintillion possible combinations!',
+      '💡 Ice cubes, dice, and sugar cubes are all examples of cubes you see every day. The cube is one of the strongest shapes in nature.',
     ],
     label:  (v) => `Cube  a = ${v.a}cm`,
     result: (v) => { const a=+v.a; return `V=${Math.pow(a,3).toFixed(1)}cm³  SA=${(6*a*a).toFixed(1)}cm²`; },
@@ -527,7 +527,7 @@ const SHAPES = {
   sphere: {
     name: 'Sphere', icon: '🔵', color: '#06B6D4',
     inputs: [{ key:'r', label:'Radius (cm)', placeholder:'4' }],
-    aframe: (v) => `<a-sphere radius="${v.r*0.1}" color="#06B6D4" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-sphere>`,
+    aframe: (v) => `<a-sphere radius="${v.r*0.1}" color="#06B6D4" opacity="0.85" position="0 0.5 0"></a-sphere>`,
     stats: (v) => {
       const r=+v.r, pi=Math.PI;
       return [
@@ -549,9 +549,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A sphere has the smallest surface area of any shape for a given volume — that\'s why soap bubbles are spherical!',
-      '💡 The Earth is not a perfect sphere — it is slightly flattened at the poles, called an oblate spheroid.',
-      '💡 Archimedes proved that the volume of a sphere is exactly 2/3 the volume of the cylinder that contains it.',
+      '💡 A sphere has no edges and no corners — it is perfectly smooth all the way around. Every point on its surface is the same distance from the center!',
+      '💡 Soap bubbles are always round because a sphere uses the least amount of surface to hold the most air inside.',
+      '💡 The Earth, the Sun, and all the planets are shaped like spheres. Gravity pulls everything into this round shape!',
     ],
     label:  (v) => `Sphere  r = ${v.r}cm`,
     result: (v) => { const r=+v.r,pi=Math.PI; return `V=${((4/3)*pi*r*r*r).toFixed(1)}cm³  SA=${(4*pi*r*r).toFixed(1)}cm²`; },
@@ -563,7 +563,7 @@ const SHAPES = {
       { key:'r', label:'Radius (cm)',  placeholder:'3' },
       { key:'h', label:'Height (cm)', placeholder:'8' },
     ],
-    aframe: (v) => `<a-cylinder radius="${v.r*0.1}" height="${v.h*0.1}" color="#10B981" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cylinder>`,
+    aframe: (v) => `<a-cylinder radius="${v.r*0.1}" height="${v.h*0.1}" color="#10B981" opacity="0.85" position="0 0.5 0"></a-cylinder>`,
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI;
       return [
@@ -585,9 +585,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A cylinder is the shape with the best volume-to-surface-area ratio for prisms — that\'s why food cans are cylindrical.',
-      '💡 The optimal height-to-diameter ratio for a cylinder is h = 2r for maximum volume.',
-      '💡 The word cylinder comes from the Greek "kylindros" meaning roller.',
+      '💡 A cylinder has two flat circular faces on the top and bottom, and one curved face wrapping around the side.',
+      '💡 Cans of food, batteries, and candles are all cylinders. Engineers use this shape because it is very strong and easy to stack.',
+      '💡 If you roll a flat rectangle into a tube, you get the curved side of a cylinder. Try it with a piece of paper!',
     ],
     label:  (v) => `Cylinder  r=${v.r}cm  h=${v.h}cm`,
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI; return `V=${(pi*r*r*h).toFixed(1)}cm³  SA=${(2*pi*r*(r+h)).toFixed(1)}cm²`; },
@@ -599,7 +599,7 @@ const SHAPES = {
       { key:'r', label:'Base Radius (cm)', placeholder:'3' },
       { key:'h', label:'Height (cm)',      placeholder:'7' },
     ],
-    aframe: (v) => `<a-cone radius-bottom="${v.r*0.1}" radius-top="0.001" height="${v.h*0.1}" color="#F97316" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cone>`,
+    aframe: (v) => `<a-cone radius-bottom="${v.r*0.1}" radius-top="0.001" height="${v.h*0.1}" color="#F97316" opacity="0.85" position="0 0.5 0"></a-cone>`,
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI, l=Math.sqrt(r*r+h*h);
       return [
@@ -621,9 +621,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 The slant height uses the Pythagorean theorem: l = √(r² + h²) — a key connection between 2D and 3D geometry!',
-      '💡 A cone has exactly 1/3 the volume of a cylinder with the same radius and height.',
-      '💡 The Great Pyramid of Giza is a square pyramid, but an ice cream cone is a perfect cone!',
+      '💡 A cone has one flat circular base and one pointed tip called the apex. The slant side is curved all the way around.',
+      '💡 Ice cream cones, party hats, and traffic cones are all real-life examples of this shape!',
+      '💡 To find the slant height of a cone we use the Pythagorean theorem — the same formula used in right triangles. Math connects everything!',
     ],
     label:  (v) => `Cone  r=${v.r}cm  h=${v.h}cm`,
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI,l=Math.sqrt(r*r+h*h); return `V=${((1/3)*pi*r*r*h).toFixed(1)}cm³  l=${l.toFixed(1)}cm`; },
@@ -635,7 +635,7 @@ const SHAPES = {
       { key:'b', label:'Base Side (cm)', placeholder:'6' },
       { key:'h', label:'Height (cm)',    placeholder:'8' },
     ],
-    aframe: (v) => `<a-cone radius-bottom="${v.b*0.07}" radius-top="0.001" height="${v.h*0.1}" color="#F59E0B" opacity="0.85" segments-radial="4" position="0 0.5 0" rotation="0 45 0" animation="property:rotation;from:0 45 0;to:360 45 0;loop:true;dur:4000;easing:linear"></a-cone>`,
+    aframe: (v) => `<a-cone radius-bottom="${v.b*0.07}" radius-top="0.001" height="${v.h*0.1}" color="#F59E0B" opacity="0.85" segments-radial="4" position="0 0.5 0" rotation="0 45 0"></a-cone>`,
     stats: (v) => {
       const b=+v.b, h=+v.h, slant=Math.sqrt(h*h+(b/2)*(b/2));
       return [
@@ -657,9 +657,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 The Egyptian pyramids were built around 2500 BC — the Great Pyramid was the tallest man-made structure for 3,800 years!',
-      '💡 A pyramid has exactly 1/3 the volume of a prism with the same base and height.',
-      '💡 The angle of inclination of the Great Pyramid of Giza is approximately 51.5°.',
+      '💡 A square pyramid has 5 faces — 1 square on the bottom and 4 triangles on the sides that all meet at the top.',
+      '💡 The Great Pyramid of Giza in Egypt was built over 4,500 years ago and was the tallest building in the world for almost 4,000 years!',
+      '💡 A pyramid holds exactly one third of the volume of a box with the same base and height. Fill a pyramid with water, pour it into the box — it only fills one third!',
     ],
     label:  (v) => `Pyramid  b=${v.b}cm  h=${v.h}cm`,
     result: (v) => { const b=+v.b,h=+v.h; return `V=${((1/3)*b*b*h).toFixed(1)}cm³  Base=${(b*b).toFixed(1)}cm²`; },
@@ -671,7 +671,7 @@ const SHAPES = {
       { key:'R', label:'Major Radius (cm)', placeholder:'5' },
       { key:'r', label:'Minor Radius (cm)', placeholder:'2' },
     ],
-    aframe: (v) => `<a-torus radius="${v.R*0.1}" radius-tubular="${v.r*0.1}" color="#8B5CF6" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-torus>`,
+    aframe: (v) => `<a-torus radius="${v.R*0.1}" radius-tubular="${v.r*0.1}" color="#8B5CF6" opacity="0.85" position="0 0.5 0"></a-torus>`,
     stats: (v) => {
       const R=+v.R, r=+v.r, pi=Math.PI;
       return [
@@ -693,9 +693,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 The torus volume formula was discovered by Pappus of Alexandria around 340 AD using his centroid theorem!',
-      '💡 In topology, a coffee mug and a torus are considered the same shape — they both have one hole.',
-      '💡 Donut-shaped (toroidal) plasma chambers are used in nuclear fusion reactors called tokamaks.',
+      '💡 A torus is basically a donut shape! It has a hole in the middle and a tube that goes all the way around.',
+      '💡 If you take a rubber band and look at it from the side, it is a torus. Bicycle tires and life rings are also torus shapes!',
+      '💡 The torus is special in math — a coffee mug and a donut are considered the same shape because they both have exactly one hole!',
     ],
     label:  (v) => `Torus  R=${v.R}cm  r=${v.r}cm`,
     result: (v) => { const R=+v.R,r=+v.r,pi=Math.PI; return `V=${(2*pi*pi*R*r*r).toFixed(1)}cm³  SA=${(4*pi*pi*R*r).toFixed(1)}cm²`; },
@@ -708,7 +708,7 @@ const SHAPES = {
       { key:'w', label:'Width (cm)',  placeholder:'5' },
       { key:'h', label:'Height (cm)', placeholder:'4' },
     ],
-    aframe: (v) => `<a-box width="${v.l*0.1}" height="${v.h*0.1}" depth="${v.w*0.1}" color="#EF4444" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-box>`,
+    aframe: (v) => `<a-box width="${v.l*0.1}" height="${v.h*0.1}" depth="${v.w*0.1}" color="#EF4444" opacity="0.85" position="0 0.5 0"></a-box>`,
     stats: (v) => {
       const l=+v.l, w=+v.w, h=+v.h;
       return [
@@ -730,9 +730,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 The space diagonal uses 3D Pythagoras: d = √(l²+w²+h²) — the classic theorem extended into 3 dimensions!',
-      '💡 A cube is a special case of a cuboid where all three sides are equal.',
-      '💡 Most everyday objects like boxes, rooms, and books are cuboids.',
+      '💡 A cuboid is like a cube but its sides can be different lengths. It has 6 flat faces, 12 edges, and 8 corners.',
+      '💡 Almost every box you have ever seen — a shoebox, a cereal box, a phone box — is a cuboid shape!',
+      '💡 To find the longest distance inside a cuboid (from corner to corner) we use 3D Pythagoras — the triangle formula extended into 3 dimensions!',
     ],
     label:  (v) => `Cuboid  ${v.l}×${v.w}×${v.h}cm`,
     result: (v) => { const l=+v.l,w=+v.w,h=+v.h; return `V=${(l*w*h).toFixed(1)}cm³  SA=${(2*(l*w+l*h+w*h)).toFixed(1)}cm²`; },
@@ -745,7 +745,7 @@ const SHAPES = {
       { key:'b', label:'Triangle Height (cm)', placeholder:'5' },
       { key:'l', label:'Prism Length (cm)',    placeholder:'9' },
     ],
-    aframe: (v) => `<a-cylinder radius="${v.a*0.06}" height="${v.l*0.1}" color="#06B6D4" opacity="0.85" segments-radial="3" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cylinder>`,
+    aframe: (v) => `<a-cylinder radius="${v.a*0.06}" height="${v.l*0.1}" color="#06B6D4" opacity="0.85" segments-radial="3" position="0 0.5 0"></a-cylinder>`,
     stats: (v) => {
       const a=+v.a, b=+v.b, l=+v.l;
       const triArea=0.5*a*b, hyp=Math.sqrt(a*a+b*b);
@@ -769,9 +769,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A triangular prism is the shape of a Toblerone chocolate box!',
-      '💡 When light passes through a glass triangular prism it splits into all rainbow colors — called dispersion.',
-      '💡 The Pythagorean theorem applies directly to the triangular face of this shape.',
+      '💡 A triangular prism has 5 faces — 2 triangles on the ends and 3 rectangles connecting them. It looks like a Toblerone chocolate box!',
+      '💡 When sunlight passes through a glass triangular prism it splits into all the colors of the rainbow. This is how rainbows in the sky are formed!',
+      '💡 The area of the triangle at each end is calculated using the formula: Area = ½ × base × height. This is one of the most used formulas in geometry!',
     ],
     label:  (v) => `Prism  b=${v.a}  h=${v.b}  l=${v.l}cm`,
     result: (v) => { const a=+v.a,b=+v.b,l=+v.l; return `V=${(0.5*a*b*l).toFixed(1)}cm³  A=${(0.5*a*b).toFixed(1)}cm²`; },
