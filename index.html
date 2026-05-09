@@ -13,6 +13,24 @@
   <!-- google fonts for the UI -->
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
+  <script>
+    // we intercept the camera request before ar.js makes it
+    // this forces the phone to use the wide angle lens at zoom 1
+    // without this the S23 defaults to the telephoto lens and it looks zoomed in and cut off
+    var originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+      if (constraints && constraints.video) {
+        constraints.video = {
+          facingMode: { exact: 'environment' },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+          zoom:   1.0
+        };
+      }
+      return originalGetUserMedia(constraints);
+    };
+  </script>
+
   <style>
     /* reset all default browser spacing */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
