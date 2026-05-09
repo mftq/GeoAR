@@ -13,8 +13,10 @@
   <!-- google fonts for the UI -->
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 
-  <!-- fix camera -->
   <script>
+    // we intercept the camera request before ar.js makes it
+    // this forces the phone to use the wide angle lens at zoom 1
+    // without this the S23 defaults to the telephoto lens and it looks zoomed in and cut off
     var originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     navigator.mediaDevices.getUserMedia = function(constraints) {
       if (constraints && constraints.video) {
@@ -370,14 +372,14 @@
     <!-- this is where we drop in the 3d shape using javascript -->
     <a-entity id="shapeEntity"></a-entity>
 
-    <!-- shape name shown above the shape -->
-    <a-text id="shapeLabel" value="" align="center" color="#06B6D4" scale="0.4 0.4 0.4" position="0 1.2 0"></a-text>
+    <!-- shape name shown above the shape - position set by JS based on shape size -->
+    <a-text id="shapeLabel" value="" align="center" color="#06B6D4" scale="0.4 0.4 0.4" position="0 1.5 0"></a-text>
 
     <!-- dimensions shown below the name -->
-    <a-text id="dimLabel" value="" align="center" color="#ffffff" scale="0.28 0.28 0.28" position="0 0.95 0"></a-text>
+    <a-text id="dimLabel" value="" align="center" color="#ffffff" scale="0.28 0.28 0.28" position="0 1.25 0"></a-text>
 
-    <!-- calculated result shown below dimensions -->
-    <a-text id="resultLabel" value="" align="center" color="#10B981" scale="0.28 0.28 0.28" position="0 0.75 0"></a-text>
+    <!-- calculated result shown at the bottom of the label stack -->
+    <a-text id="resultLabel" value="" align="center" color="#10B981" scale="0.28 0.28 0.28" position="0 1.05 0"></a-text>
 
   </a-marker>
 
@@ -842,10 +844,35 @@ function launchShape() {
   // inject the 3d shape html into the AR marker
   document.getElementById('shapeEntity').innerHTML = shape.aframe(inputValues);
 
-  // update the floating text above the shape
+  // calculate how tall the shape is so we can put text above it
+  // all shapes are at position y=0.5, so we need 0.5 + half the shape height + some padding
+  let shapeHeight = 0.5; // default height in aframe units
+  const v = inputValues;
+  if (selectedShape === 'cube')      shapeHeight = +v.a * 0.1;
+  if (selectedShape === 'sphere')    shapeHeight = +v.r * 0.2;
+  if (selectedShape === 'cylinder')  shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'cone')      shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'pyramid')   shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'torus')     shapeHeight = +v.R * 0.2;
+  if (selectedShape === 'rectangle') shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'prism')     shapeHeight = +v.l * 0.1;
+
+  // text starts at 0.5 (shape base) + shapeHeight + 0.15 padding
+  const textBase = 0.5 + shapeHeight + 0.15;
+
+  // set each text label above the shape with spacing between them
+  document.getElementById('shapeLabel').setAttribute('position',  `0 ${(textBase + 0.4).toFixed(2)} 0`);
+  document.getElementById('dimLabel').setAttribute('position',    `0 ${(textBase + 0.2).toFixed(2)} 0`);
+  document.getElementById('resultLabel').setAttribute('position', `0 ${textBase.toFixed(2)} 0`);
+
+  // update the text values
   document.getElementById('shapeLabel').setAttribute('value', shape.name);
   document.getElementById('dimLabel').setAttribute('value', shape.label(inputValues));
   document.getElementById('resultLabel').setAttribute('value', shape.result(inputValues));
+
+  // reset rotation so new shape starts fresh
+  currentRotX = 0;
+  currentRotY = 0;
 
   // hide the input screen, show the bottom info panel
   document.getElementById('dimPanel').style.display   = 'none';
@@ -902,6 +929,57 @@ function showTab(name, btn) {
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
 }
+
+// touch spin — lets user drag finger to rotate the shape
+// when the user touches the AR canvas and drags, we rotate the shape entity
+let touchStartX = 0;
+let touchStartY = 0;
+let isDragging  = false;
+let currentRotY = 0; // current Y rotation of the shape
+let currentRotX = 0; // current X rotation of the shape
+
+// when finger touches the screen (but not on the UI panels)
+document.addEventListener('touchstart', e => {
+  // ignore if touch is on the UI (bottom panel, top bar)
+  if (e.target.closest('#btm') || e.target.closest('.topbar') ||
+      e.target.closest('#shapePicker') || e.target.closest('#dimPanel')) return;
+
+  isDragging  = true;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+// when finger moves, rotate the shape based on how far the finger moved
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+
+  const dx = e.touches[0].clientX - touchStartX; // how far left/right
+  const dy = e.touches[0].clientY - touchStartY; // how far up/down
+
+  // left/right drag rotates around Y axis
+  // up/down drag rotates around X axis
+  currentRotY += dx * 0.5;
+  currentRotX += dy * 0.5;
+
+  // apply the rotation to the shape entity
+  const entity = document.getElementById('shapeEntity');
+  if (entity) {
+    entity.setAttribute('rotation', `${currentRotX} ${currentRotY} 0`);
+
+    // also stop the auto-spin animation when user takes control
+    const shape = entity.querySelector('[animation]');
+    if (shape) shape.removeAttribute('animation');
+  }
+
+  // update start position for next move event
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+// when finger lifts, stop dragging
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
 
 // update the marker detection pill in the top bar
 document.addEventListener('DOMContentLoaded', () => {
