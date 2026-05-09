@@ -693,9 +693,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A torus is basically a donut shape! It has a hole in the middle and a tube that goes all the way around.',
-      '💡 If you take a rubber band and look at it from the side, it is a torus. Bicycle tires and life rings are also torus shapes!',
-      '💡 The torus is special in math — a coffee mug and a donut are considered the same shape because they both have exactly one hole!',
+      '💡 A torus is a 3D ring shape — like a lifesaver candy or a swimming ring. It is made by rotating a circle around an axis.',
+      '💡 Bicycle tires, car tires, and even Saturn\'s rings are all examples of torus shapes found in real life.',
+      '💡 The torus has two measurements — the major radius R is how wide the whole ring is, and the minor radius r is how thick the ring itself is.',
     ],
     label:  (v) => `Torus  R=${v.R}cm  r=${v.r}cm`,
     result: (v) => { const R=+v.R,r=+v.r,pi=Math.PI; return `V=${(2*pi*pi*R*r*r).toFixed(1)}cm³  SA=${(4*pi*pi*R*r).toFixed(1)}cm²`; },
@@ -769,9 +769,9 @@ const SHAPES = {
       ];
     },
     facts: [
-      '💡 A triangular prism has 5 faces — 2 triangles on the ends and 3 rectangles connecting them. It looks like a Toblerone chocolate box!',
-      '💡 When sunlight passes through a glass triangular prism it splits into all the colors of the rainbow. This is how rainbows in the sky are formed!',
-      '💡 The area of the triangle at each end is calculated using the formula: Area = ½ × base × height. This is one of the most used formulas in geometry!',
+      '💡 A triangular prism has 5 faces — 2 triangles on the ends and 3 rectangles on the sides. It is one of the most common 3D shapes in architecture.',
+      '💡 When sunlight passes through a glass triangular prism it splits into all the colors of the rainbow. This is exactly how rainbows form in the sky!',
+      '💡 The area of the triangle at each end is calculated using: Area = ½ × base × height. This is one of the most important formulas in all of geometry!',
     ],
     label:  (v) => `Prism  b=${v.a}  h=${v.b}  l=${v.l}cm`,
     result: (v) => { const a=+v.a,b=+v.b,l=+v.l; return `V=${(0.5*a*b*l).toFixed(1)}cm³  A=${(0.5*a*b).toFixed(1)}cm²`; },
@@ -843,19 +843,18 @@ function launchShape() {
   document.getElementById('shapeEntity').innerHTML = shape.aframe(inputValues);
 
   // calculate how tall the shape is so we can put text above it
-  // all shapes are at position y=0.5, so we need 0.5 + half the shape height + some padding
-  let shapeHeight = 0.5; // default height in aframe units
+  let shapeHeight = 0.5;
   const v = inputValues;
   if (selectedShape === 'cube')      shapeHeight = +v.a * 0.1;
-  if (selectedShape === 'sphere')    shapeHeight = +v.r * 0.2;
+  if (selectedShape === 'sphere')    shapeHeight = +v.r * 0.1;
   if (selectedShape === 'cylinder')  shapeHeight = +v.h * 0.1;
   if (selectedShape === 'cone')      shapeHeight = +v.h * 0.1;
   if (selectedShape === 'pyramid')   shapeHeight = +v.h * 0.1;
-  if (selectedShape === 'torus')     shapeHeight = +v.R * 0.2;
+  if (selectedShape === 'torus')     shapeHeight = +v.r * 0.1;
   if (selectedShape === 'rectangle') shapeHeight = +v.h * 0.1;
   if (selectedShape === 'prism')     shapeHeight = +v.l * 0.1;
 
-  // text starts at 0.5 (shape base) + shapeHeight + 0.15 padding
+  // text starts just above the shape top
   const textBase = 0.5 + shapeHeight + 0.15;
 
   // set each text label above the shape with spacing between them
