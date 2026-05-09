@@ -486,7 +486,7 @@ const SHAPES = {
     // what inputs to ask the user for
     inputs: [{ key:'a', label:'Side Length (cm)', placeholder:'5' }],
     // the html to create the 3d shape in the AR scene
-    aframe: (v) => `<a-box width="${v.a*0.1}" height="${v.a*0.1}" depth="${v.a*0.1}" color="#2563EB" opacity="0.8" position="0 ${v.a*0.05} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:6000;easing:linear"></a-box>`,
+    aframe: (v) => `<a-box width="${v.a*0.1}" height="${v.a*0.1}" depth="${v.a*0.1}" color="#2563EB" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-box>`,
     // calculate all measurements
     stats: (v) => {
       const a = +v.a;
@@ -521,7 +521,7 @@ const SHAPES = {
   sphere: {
     name: 'Sphere', icon: '🔵', color: '#06B6D4',
     inputs: [{ key:'r', label:'Radius (cm)', placeholder:'4' }],
-    aframe: (v) => `<a-sphere radius="${v.r*0.1}" color="#06B6D4" opacity="0.8" position="0 ${v.r*0.1} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:7000;easing:linear"></a-sphere>`,
+    aframe: (v) => `<a-sphere radius="${v.r*0.1}" color="#06B6D4" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-sphere>`,
     stats: (v) => {
       const r=+v.r, pi=Math.PI;
       return [
@@ -557,7 +557,7 @@ const SHAPES = {
       { key:'r', label:'Radius (cm)',  placeholder:'3' },
       { key:'h', label:'Height (cm)', placeholder:'8' },
     ],
-    aframe: (v) => `<a-cylinder radius="${v.r*0.1}" height="${v.h*0.1}" color="#10B981" opacity="0.8" position="0 ${v.h*0.05} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:6000;easing:linear"></a-cylinder>`,
+    aframe: (v) => `<a-cylinder radius="${v.r*0.1}" height="${v.h*0.1}" color="#10B981" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cylinder>`,
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI;
       return [
@@ -593,7 +593,7 @@ const SHAPES = {
       { key:'r', label:'Base Radius (cm)', placeholder:'3' },
       { key:'h', label:'Height (cm)',      placeholder:'7' },
     ],
-    aframe: (v) => `<a-cone radius-bottom="${v.r*0.1}" radius-top="0.001" height="${v.h*0.1}" color="#F97316" opacity="0.85" position="0 ${v.h*0.05} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:5000;easing:linear"></a-cone>`,
+    aframe: (v) => `<a-cone radius-bottom="${v.r*0.1}" radius-top="0.001" height="${v.h*0.1}" color="#F97316" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cone>`,
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI, l=Math.sqrt(r*r+h*h);
       return [
@@ -629,7 +629,7 @@ const SHAPES = {
       { key:'b', label:'Base Side (cm)', placeholder:'6' },
       { key:'h', label:'Height (cm)',    placeholder:'8' },
     ],
-    aframe: (v) => `<a-cone radius-bottom="${v.b*0.07}" radius-top="0.001" height="${v.h*0.1}" color="#F59E0B" opacity="0.85" segments-radial="4" position="0 ${v.h*0.05} 0" rotation="0 45 0" animation="property:rotation;from:0 45 0;to:360 45 0;loop:true;dur:7000;easing:linear"></a-cone>`,
+    aframe: (v) => `<a-cone radius-bottom="${v.b*0.07}" radius-top="0.001" height="${v.h*0.1}" color="#F59E0B" opacity="0.85" segments-radial="4" position="0 0.5 0" rotation="0 45 0" animation="property:rotation;from:0 45 0;to:360 45 0;loop:true;dur:4000;easing:linear"></a-cone>`,
     stats: (v) => {
       const b=+v.b, h=+v.h, slant=Math.sqrt(h*h+(b/2)*(b/2));
       return [
@@ -665,7 +665,7 @@ const SHAPES = {
       { key:'R', label:'Major Radius (cm)', placeholder:'5' },
       { key:'r', label:'Minor Radius (cm)', placeholder:'2' },
     ],
-    aframe: (v) => `<a-torus radius="${v.R*0.1}" radius-tubular="${v.r*0.1}" color="#8B5CF6" opacity="0.85" position="0 ${v.r*0.1} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:8000;easing:linear"></a-torus>`,
+    aframe: (v) => `<a-torus radius="${v.R*0.1}" radius-tubular="${v.r*0.1}" color="#8B5CF6" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-torus>`,
     stats: (v) => {
       const R=+v.R, r=+v.r, pi=Math.PI;
       return [
@@ -702,7 +702,7 @@ const SHAPES = {
       { key:'w', label:'Width (cm)',  placeholder:'5' },
       { key:'h', label:'Height (cm)', placeholder:'4' },
     ],
-    aframe: (v) => `<a-box width="${v.l*0.1}" height="${v.h*0.1}" depth="${v.w*0.1}" color="#EF4444" opacity="0.8" position="0 ${v.h*0.05} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:6000;easing:linear"></a-box>`,
+    aframe: (v) => `<a-box width="${v.l*0.1}" height="${v.h*0.1}" depth="${v.w*0.1}" color="#EF4444" opacity="0.85" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-box>`,
     stats: (v) => {
       const l=+v.l, w=+v.w, h=+v.h;
       return [
@@ -739,7 +739,7 @@ const SHAPES = {
       { key:'b', label:'Triangle Height (cm)', placeholder:'5' },
       { key:'l', label:'Prism Length (cm)',    placeholder:'9' },
     ],
-    aframe: (v) => `<a-cylinder radius="${v.a*0.06}" height="${v.l*0.1}" color="#06B6D4" opacity="0.8" segments-radial="3" position="0 ${v.l*0.05} 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:6000;easing:linear"></a-cylinder>`,
+    aframe: (v) => `<a-cylinder radius="${v.a*0.06}" height="${v.l*0.1}" color="#06B6D4" opacity="0.85" segments-radial="3" position="0 0.5 0" animation="property:rotation;from:0 0 0;to:0 360 0;loop:true;dur:4000;easing:linear"></a-cylinder>`,
     stats: (v) => {
       const a=+v.a, b=+v.b, l=+v.l;
       const triArea=0.5*a*b, hyp=Math.sqrt(a*a+b*b);
