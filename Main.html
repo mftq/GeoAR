@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0"/>
+  <title>GeoAR — AR Geometry Explorer</title>
+
+  <!-- aframe is the 3D library we use to build AR scenes -->
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <!-- ar.js adds marker detection on top of aframe -->
+  <script src="https://raw.githack.com/AR-js-org/AR.js/3.4.7/aframe/build/aframe-ar.js"></script>
+
+  <!-- google fonts for the UI -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+
+  <script>
+    // this script fixes the camera so it fills the screen correctly on mobile
+    var originalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = function(constraints) {
+      if (constraints && constraints.video) {
+        constraints.video = {
+          facingMode: { exact: 'environment' },
+          width:  { ideal: 1280 },
+          height: { ideal: 720 },
+          zoom:   1.0
+        };
+      }
+      return originalGetUserMedia(constraints);
+    };
+  </script>
+
+  <style>
+    /* reset all default browser spacing */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* color variables so we can reuse them easily */
+    :root {
+      --ink:    #0A0F1E;
+      --blue:   #2563EB;
+      --cyan:   #06B6D4;
+      --orange: #F97316;
+      --green:  #10B981;
+      --red:    #EF4444;
+      --yellow: #F59E0B;
+      --bg:     rgba(10,15,30,0.93);
+      --border: rgba(37,99,235,0.25);
+      --text:   #E8EDF8;
+      --muted:  #4A5568;
+    }
+
+    /* make everything fill the screen with no scrollbars */
+    html, body {
+      overflow: hidden;
+      width: 100%; height: 100%;
+      font-family: 'Syne', sans-serif;
+      background: var(--ink);
+      color: var(--text);
+    }
+
+    /* force the camera video behind everything */
+    video {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      object-fit: cover !important;
+      z-index: 0 !important;
+    }
+
+    /* the AR canvas must be above the video but below the UI */
+    canvas {
+      position: fixed !important;
+      top: 0 !important; left: 0 !important;
+      width: 100vw !important; height: 100vh !important;
+      z-index: 1 !important;
+      pointer-events: none !important;
+    }
+
+    /* UI sits on top of everything */
+    #ui {
+      position: fixed; top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 10;
+      pointer-events: none; /* clicks pass through unless specified */
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* top navigation bar */
+    .topbar {
+      pointer-events: all;
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: var(--bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .app-logo { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; }
+    .app-logo span { color: var(--cyan); }
+
+    /* the pill that shows if the marker is detected */
+    .marker-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 1px;
+      padding: 5px 12px; border-radius: 100px;
+      border: 1px solid var(--border);
+      background: rgba(6,182,212,0.08);
+      color: var(--cyan);
+      transition: all 0.3s;
+    }
+    /* green when marker is found */
+    .marker-pill.found {
+      color: var(--green);
+      border-color: rgba(16,185,129,0.4);
+      background: rgba(16,185,129,0.1);
+    }
+
+    /* shape picker - the first screen the user sees */
+    #shapePicker {
+      position: fixed; inset: 0;
+      background: var(--ink);
+      z-index: 50;
+      display: flex; flex-direction: column;
+      align-items: center;
+      padding: 0 0 20px;
+      overflow-y: auto;
+    }
+
+    .picker-header {
+      width: 100%;
+      padding: 24px 20px 16px;
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+
+    .picker-header h1 { font-size: 28px; font-weight: 800; letter-spacing: -1px; margin-bottom: 6px; }
+    .picker-header p { font-size: 13px; color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+
+    /* grid of shape cards */
+    .shape-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%; max-width: 400px;
+      padding: 0 16px;
+    }
+
+    .shape-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+      pointer-events: all;
+    }
+
+    .shape-card:active {
+      border-color: var(--cyan);
+      background: rgba(6,182,212,0.08);
+      transform: scale(0.97);
+    }
+
+    .shape-icon { font-size: 40px; margin-bottom: 10px; }
+    .shape-name { font-size: 15px; font-weight: 700; }
+    .shape-desc { font-size: 11px; color: var(--muted); margin-top: 3px; font-family: 'JetBrains Mono', monospace; }
+
+    /* dimension input screen */
+    #dimPanel {
+      position: fixed; inset: 0;
+      background: var(--ink);
+      z-index: 49;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .dim-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; }
+
+    .back-btn {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 8px 14px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      pointer-events: all;
+    }
+
+    .dim-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .dim-icon  { font-size: 28px; }
+
+    /* text input fields for dimensions */
+    .input-group { margin-bottom: 14px; }
+
+    .input-group label {
+      display: block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .input-group input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input-group input:focus { border-color: var(--cyan); }
+
+    /* the big button that launches the shape in AR */
+    .launch-btn {
+      width: 100%; margin-top: 8px;
+      background: var(--blue);
+      color: white; border: none;
+      border-radius: 14px; padding: 16px;
+      font-family: 'Syne', sans-serif;
+      font-size: 16px; font-weight: 700;
+      cursor: pointer;
+      pointer-events: all;
+    }
+    .launch-btn:active { opacity: 0.88; transform: scale(0.98); }
+
+    /* shows the formulas before launching */
+    .formula-preview {
+      background: rgba(37,99,235,0.08);
+      border: 1px solid rgba(37,99,235,0.2);
+      border-radius: 12px;
+      padding: 14px;
+      margin-top: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.8;
+    }
+
+    /* the bottom panel that shows stats, formulas, and facts */
+    #infoPanel {
+      pointer-events: all;
+      background: var(--bg);
+      backdrop-filter: blur(20px);
+      border-top: 1px solid var(--border);
+      max-height: 55vh;
+      overflow-y: auto;
+    }
+
+    /* tabs inside the info panel */
+    .info-tabs { display: flex; border-bottom: 1px solid var(--border); }
+
+    .info-tab {
+      flex: 1; background: transparent; border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--muted);
+      font-family: 'Syne', sans-serif;
+      font-size: 13px; font-weight: 600;
+      padding: 10px 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .info-tab.active { color: var(--cyan); border-bottom-color: var(--cyan); }
+
+    .info-pane { display: none; padding: 14px 16px; }
+    .info-pane.active { display: block; }
+
+    /* grid of measurement cards */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .stat-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px; letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 17px; font-weight: 500;
+      color: var(--cyan);
+    }
+
+    .stat-unit { font-size: 11px; color: var(--muted); }
+
+    /* each formula shown step by step */
+    .formula-step {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      line-height: 1.9;
+    }
+
+    .step-title  { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--orange); margin-bottom: 6px; font-weight: 700; }
+    .step-formula { color: var(--cyan); font-size: 13px; }
+    .step-result  { color: var(--green); margin-top: 4px; }
+
+    /* fun fact cards */
+    .fact-card {
+      background: rgba(139,92,246,0.08);
+      border: 1px solid rgba(139,92,246,0.25);
+      border-radius: 10px;
+      padding: 12px 14px;
+      margin-bottom: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    /* back button at bottom of stats */
+    .change-btn {
+      width: 100%; margin-top: 10px;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body style="margin: 0; overflow: hidden;">
+
+<!-- the AR scene - this is where the 3d shapes appear above the marker -->
+<a-scene
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; zoom: 1;"
+  vr-mode-ui="enabled: false"
+  renderer="logarithmicDepthBuffer: true;"
+>
+  <!-- hiro marker - when the camera sees this, the 3d shape appears above it -->
+  <a-marker
+    id="hiroMarker"
+    preset="hiro"
+    smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5"
+  >
+    <!-- this is where we drop in the 3d shape using javascript -->
+    <a-entity id="shapeEntity"></a-entity>
+
+    <!-- shape name shown above the shape - position set by JS based on shape size -->
+    <a-text id="shapeLabel" value="" align="center" color="#06B6D4" scale="0.7 0.7 0.7" position="0 1.5 0"></a-text>
+
+    <!-- dimensions shown below the name -->
+    <a-text id="dimLabel" value="" align="center" color="#ffffff" scale="0.5 0.5 0.5" position="0 1.25 0"></a-text>
+
+    <!-- calculated result shown at the bottom of the label stack -->
+    <a-text id="resultLabel" value="" align="center" color="#10B981" scale="0.5 0.5 0.5" position="0 1.05 0"></a-text>
+
+  </a-marker>
+
+  <!-- camera is required for ar.js to work -->
+  <a-entity camera></a-entity>
+</a-scene>
+
+
+<!-- UI sits on top of the AR camera view -->
+<div id="ui">
+
+  <!-- top bar always visible -->
+  <div class="topbar">
+    <div class="app-logo">Geo<span>AR</span></div>
+    <div class="marker-pill" id="markerPill">🔍 Point at Hiro</div>
+  </div>
+
+  <!-- info panel shown after a shape is launched -->
+  <div id="infoPanel" style="display:none">
+    <div class="info-tabs">
+      <button class="info-tab active" onclick="showTab('stats',this)">📊 Stats</button>
+      <button class="info-tab"        onclick="showTab('formulas',this)">📐 Formulas</button>
+      <button class="info-tab"        onclick="showTab('facts',this)">💡 Facts</button>
+    </div>
+    <div class="info-pane active" id="tab-stats">
+      <div class="stat-grid" id="statGrid"></div>
+      <button class="change-btn" onclick="changeShape()">↩ Choose Different Shape</button>
+    </div>
+    <div class="info-pane" id="tab-formulas">
+      <div id="formulaSteps"></div>
+    </div>
+    <div class="info-pane" id="tab-facts">
+      <div id="factCards"></div>
+    </div>
+  </div>
+
+</div>
+
+
+<!-- shape picker screen - first thing user sees -->
+<div id="shapePicker">
+  <div class="picker-header">
+    <h1>GeoAR</h1>
+    <p>AR Geometry Explorer · Point at Hiro marker</p>
+  </div>
+  <div class="shape-grid">
+    <div class="shape-card" onclick="selectShape('cube')">
+      <div class="shape-icon">🟦</div>
+      <div class="shape-name">Cube</div>
+      <div class="shape-desc">3D · 6 faces</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('sphere')">
+      <div class="shape-icon">🔵</div>
+      <div class="shape-name">Sphere</div>
+      <div class="shape-desc">3D · ∞ sides</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('cylinder')">
+      <div class="shape-icon">🥫</div>
+      <div class="shape-name">Cylinder</div>
+      <div class="shape-desc">3D · 2 circles</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('cone')">
+      <div class="shape-icon">🍦</div>
+      <div class="shape-name">Cone</div>
+      <div class="shape-desc">3D · apex + base</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('pyramid')">
+      <div class="shape-icon">🔺</div>
+      <div class="shape-name">Pyramid</div>
+      <div class="shape-desc">3D · 4 triangles</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('torus')">
+      <div class="shape-icon">🍩</div>
+      <div class="shape-name">Torus</div>
+      <div class="shape-desc">3D · donut shape</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('rectangle')">
+      <div class="shape-icon">🟥</div>
+      <div class="shape-name">Cuboid</div>
+      <div class="shape-desc">3D · box shape</div>
+    </div>
+    <div class="shape-card" onclick="selectShape('prism')">
+      <div class="shape-icon">🔷</div>
+      <div class="shape-name">Prism</div>
+      <div class="shape-desc">3D · triangle base</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- dimension input screen - shown after user picks a shape -->
+<div id="dimPanel">
+  <div class="dim-header">
+    <button class="back-btn" onclick="goBack()">← Back</button>
+    <div class="dim-icon" id="dimIcon"></div>
+    <div class="dim-title" id="dimTitle"></div>
+  </div>
+  <!-- inputs get added here by javascript based on which shape was chosen -->
+  <div id="dimInputs"></div>
+  <!-- formula preview so user knows what will be calculated -->
+  <div class="formula-preview" id="formulaPreview"></div>
+  <button class="launch-btn" onclick="launchShape()">Launch in AR →</button>
+</div>
+
+
+<script>
+// all 8 shapes defined here with their math and AR appearance
+const SHAPES = {
+
+  cube: {
+    name: 'Cube', icon: '🟦', color: '#2563EB',
+    // what inputs to ask the user for
+    inputs: [{ key:'a', label:'Side Length (cm)', placeholder:'5' }],
+    // the html to create the 3d shape in the AR scene
+    aframe: (v) => `<a-box width="${v.a*0.1}" height="${v.a*0.1}" depth="${v.a*0.1}" color="#2563EB" opacity="0.85" position="0 0.5 0"></a-box>`,
+    // calculate all measurements
+    stats: (v) => {
+      const a = +v.a;
+      return [
+        { label:'Side',        value: a,                        unit:'cm'  },
+        { label:'Volume',      value: Math.pow(a,3).toFixed(2), unit:'cm³' },
+        { label:'Surface Area',value: (6*a*a).toFixed(2),       unit:'cm²' },
+        { label:'Diagonal',    value: (a*Math.sqrt(3)).toFixed(2), unit:'cm' },
+        { label:'Face Area',   value: (a*a).toFixed(2),         unit:'cm²' },
+        { label:'Edges',       value: 12,                       unit:''    },
+      ];
+    },
+    // step by step formulas with the actual numbers plugged in
+    formulas: (v) => {
+      const a = +v.a;
+      return [
+        { title:'Volume',         formula:`V = a³ = ${a}³`,                  result:`= ${Math.pow(a,3).toFixed(2)} cm³` },
+        { title:'Surface Area',   formula:`SA = 6a² = 6 × ${a}²`,            result:`= ${(6*a*a).toFixed(2)} cm²` },
+        { title:'Face Diagonal',  formula:`d = a√2 = ${a}×√2`,               result:`= ${(a*Math.sqrt(2)).toFixed(2)} cm` },
+        { title:'Space Diagonal', formula:`D = a√3 = ${a}×√3`,               result:`= ${(a*Math.sqrt(3)).toFixed(2)} cm` },
+      ];
+    },
+    facts: [
+      '💡 A cube has 6 flat faces, 12 edges, and 8 corners. Every single face is a perfect square!',
+      '💡 A Rubik\'s Cube is a famous cube puzzle. Even though it looks simple, it has more than 43 quintillion possible combinations!',
+      '💡 Ice cubes, dice, and sugar cubes are all examples of cubes you see every day. The cube is one of the strongest shapes in nature.',
+    ],
+    label:  (v) => `Cube  a = ${v.a}cm`,
+    result: (v) => { const a=+v.a; return `V=${Math.pow(a,3).toFixed(1)}cm³  SA=${(6*a*a).toFixed(1)}cm²`; },
+  },
+
+  sphere: {
+    name: 'Sphere', icon: '🔵', color: '#06B6D4',
+    inputs: [{ key:'r', label:'Radius (cm)', placeholder:'4' }],
+    aframe: (v) => `<a-sphere radius="${v.r*0.1}" color="#06B6D4" opacity="0.85" position="0 0.5 0"></a-sphere>`,
+    stats: (v) => {
+      const r=+v.r, pi=Math.PI;
+      return [
+        { label:'Radius',       value: r,                                    unit:'cm'  },
+        { label:'Diameter',     value: (2*r).toFixed(2),                     unit:'cm'  },
+        { label:'Volume',       value: ((4/3)*pi*r*r*r).toFixed(2),          unit:'cm³' },
+        { label:'Surface Area', value: (4*pi*r*r).toFixed(2),                unit:'cm²' },
+        { label:'Circumference',value: (2*pi*r).toFixed(2),                  unit:'cm'  },
+        { label:'Great Circle', value: (pi*r*r).toFixed(2),                  unit:'cm²' },
+      ];
+    },
+    formulas: (v) => {
+      const r=+v.r, pi=Math.PI;
+      return [
+        { title:'Volume',        formula:`V = (4/3)πr³ = (4/3)×π×${r}³`,    result:`= ${((4/3)*pi*r*r*r).toFixed(2)} cm³` },
+        { title:'Surface Area',  formula:`SA = 4πr² = 4×π×${r}²`,            result:`= ${(4*pi*r*r).toFixed(2)} cm²` },
+        { title:'Circumference', formula:`C = 2πr = 2×π×${r}`,               result:`= ${(2*pi*r).toFixed(2)} cm` },
+        { title:'Great Circle',  formula:`A = πr² = π×${r}²`,                result:`= ${(pi*r*r).toFixed(2)} cm²` },
+      ];
+    },
+    facts: [
+      '💡 A sphere has no edges and no corners — it is perfectly smooth all the way around. Every point on its surface is the same distance from the center!',
+      '💡 Soap bubbles are always round because a sphere uses the least amount of surface to hold the most air inside.',
+      '💡 The Earth, the Sun, and all the planets are shaped like spheres. Gravity pulls everything into this round shape!',
+    ],
+    label:  (v) => `Sphere  r = ${v.r}cm`,
+    result: (v) => { const r=+v.r,pi=Math.PI; return `V=${((4/3)*pi*r*r*r).toFixed(1)}cm³  SA=${(4*pi*r*r).toFixed(1)}cm²`; },
+  },
+
+  cylinder: {
+    name: 'Cylinder', icon: '🥫', color: '#10B981',
+    inputs: [
+      { key:'r', label:'Radius (cm)',  placeholder:'3' },
+      { key:'h', label:'Height (cm)', placeholder:'8' },
+    ],
+    aframe: (v) => `<a-cylinder radius="${v.r*0.1}" height="${v.h*0.1}" color="#10B981" opacity="0.85" position="0 0.5 0"></a-cylinder>`,
+    stats: (v) => {
+      const r=+v.r, h=+v.h, pi=Math.PI;
+      return [
+        { label:'Radius',       value: r,                           unit:'cm'  },
+        { label:'Height',       value: h,                           unit:'cm'  },
+        { label:'Volume',       value: (pi*r*r*h).toFixed(2),       unit:'cm³' },
+        { label:'Lateral Area', value: (2*pi*r*h).toFixed(2),       unit:'cm²' },
+        { label:'Total SA',     value: (2*pi*r*(r+h)).toFixed(2),   unit:'cm²' },
+        { label:'Base Area',    value: (pi*r*r).toFixed(2),         unit:'cm²' },
+      ];
+    },
+    formulas: (v) => {
+      const r=+v.r, h=+v.h, pi=Math.PI;
+      return [
+        { title:'Volume',              formula:`V = πr²h = π×${r}²×${h}`,           result:`= ${(pi*r*r*h).toFixed(2)} cm³` },
+        { title:'Lateral Surface Area',formula:`LSA = 2πrh = 2×π×${r}×${h}`,        result:`= ${(2*pi*r*h).toFixed(2)} cm²` },
+        { title:'Total Surface Area',  formula:`TSA = 2πr(r+h) = 2×π×${r}×(${r}+${h})`, result:`= ${(2*pi*r*(r+h)).toFixed(2)} cm²` },
+        { title:'Base Area',           formula:`A = πr² = π×${r}²`,                 result:`= ${(pi*r*r).toFixed(2)} cm²` },
+      ];
+    },
+    facts: [
+      '💡 A cylinder has two flat circular faces on the top and bottom, and one curved face wrapping around the side.',
+      '💡 Cans of food, batteries, and candles are all cylinders. Engineers use this shape because it is very strong and easy to stack.',
+      '💡 If you roll a flat rectangle into a tube, you get the curved side of a cylinder. Try it with a piece of paper!',
+    ],
+    label:  (v) => `Cylinder  r=${v.r}cm  h=${v.h}cm`,
+    result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI; return `V=${(pi*r*r*h).toFixed(1)}cm³  SA=${(2*pi*r*(r+h)).toFixed(1)}cm²`; },
+  },
+
+  cone: {
+    name: 'Cone', icon: '🍦', color: '#F97316',
+    inputs: [
+      { key:'r', label:'Base Radius (cm)', placeholder:'3' },
+      { key:'h', label:'Height (cm)',      placeholder:'7' },
+    ],
+    aframe: (v) => `<a-cone radius-bottom="${v.r*0.1}" radius-top="0.001" height="${v.h*0.1}" color="#F97316" opacity="0.85" position="0 0.5 0"></a-cone>`,
+    stats: (v) => {
+      const r=+v.r, h=+v.h, pi=Math.PI, l=Math.sqrt(r*r+h*h);
+      return [
+        { label:'Radius',       value: r,                        unit:'cm'  },
+        { label:'Height',       value: h,                        unit:'cm'  },
+        { label:'Slant Height', value: l.toFixed(2),             unit:'cm'  },
+        { label:'Volume',       value: ((1/3)*pi*r*r*h).toFixed(2), unit:'cm³' },
+        { label:'Lateral Area', value: (pi*r*l).toFixed(2),     unit:'cm²' },
+        { label:'Total SA',     value: (pi*r*(r+l)).toFixed(2),  unit:'cm²' },
+      ];
+    },
+    formulas: (v) => {
+      const r=+v.r, h=+v.h, pi=Math.PI, l=Math.sqrt(r*r+h*h);
+      return [
+        { title:'Slant Height — uses Pythagorean theorem!', formula:`l = √(r²+h²) = √(${r}²+${h}²)`, result:`= ${l.toFixed(2)} cm` },
+        { title:'Volume',              formula:`V = (1/3)πr²h = (1/3)×π×${r}²×${h}`,   result:`= ${((1/3)*pi*r*r*h).toFixed(2)} cm³` },
+        { title:'Lateral Surface Area',formula:`LSA = πrl = π×${r}×${l.toFixed(2)}`,   result:`= ${(pi*r*l).toFixed(2)} cm²` },
+        { title:'Total Surface Area',  formula:`TSA = πr(r+l) = π×${r}×(${r}+${l.toFixed(2)})`, result:`= ${(pi*r*(r+l)).toFixed(2)} cm²` },
+      ];
+    },
+    facts: [
+      '💡 A cone has one flat circular base and one pointed tip called the apex. The slant side is curved all the way around.',
+      '💡 Ice cream cones, party hats, and traffic cones are all real-life examples of this shape!',
+      '💡 To find the slant height of a cone we use the Pythagorean theorem — the same formula used in right triangles. Math connects everything!',
+    ],
+    label:  (v) => `Cone  r=${v.r}cm  h=${v.h}cm`,
+    result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI,l=Math.sqrt(r*r+h*h); return `V=${((1/3)*pi*r*r*h).toFixed(1)}cm³  l=${l.toFixed(1)}cm`; },
+  },
+
+  pyramid: {
+    name: 'Pyramid', icon: '🔺', color: '#F59E0B',
+    inputs: [
+      { key:'b', label:'Base Side (cm)', placeholder:'6' },
+      { key:'h', label:'Height (cm)',    placeholder:'8' },
+    ],
+    aframe: (v) => `<a-cone radius-bottom="${v.b*0.07}" radius-top="0.001" height="${v.h*0.1}" color="#F59E0B" opacity="0.85" segments-radial="4" position="0 0.5 0" rotation="0 45 0"></a-cone>`,
+    stats: (v) => {
+      const b=+v.b, h=+v.h, slant=Math.sqrt(h*h+(b/2)*(b/2));
+      return [
+        { label:'Base Side',    value: b,                          unit:'cm'  },
+        { label:'Height',       value: h,                          unit:'cm'  },
+        { label:'Volume',       value: ((1/3)*b*b*h).toFixed(2),  unit:'cm³' },
+        { label:'Base Area',    value: (b*b).toFixed(2),           unit:'cm²' },
+        { label:'Slant Height', value: slant.toFixed(2),           unit:'cm'  },
+        { label:'Lateral Area', value: (2*b*slant).toFixed(2),    unit:'cm²' },
+      ];
+    },
+    formulas: (v) => {
+      const b=+v.b, h=+v.h, slant=Math.sqrt(h*h+(b/2)*(b/2));
+      return [
+        { title:'Slant Height',        formula:`l = √(h²+(b/2)²) = √(${h}²+${b/2}²)`,    result:`= ${slant.toFixed(2)} cm` },
+        { title:'Volume',              formula:`V = (1/3) × b² × h = (1/3)×${b}²×${h}`,  result:`= ${((1/3)*b*b*h).toFixed(2)} cm³` },
+        { title:'Lateral Surface Area',formula:`LSA = 2bl = 2×${b}×${slant.toFixed(2)}`,  result:`= ${(2*b*slant).toFixed(2)} cm²` },
+        { title:'Total Surface Area',  formula:`TSA = b² + 2bl`,                           result:`= ${(b*b+2*b*slant).toFixed(2)} cm²` },
+      ];
+    },
+    facts: [
+      '💡 A square pyramid has 5 faces — 1 square on the bottom and 4 triangles on the sides that all meet at the top.',
+      '💡 The Great Pyramid of Giza in Egypt was built over 4,500 years ago and was the tallest building in the world for almost 4,000 years!',
+      '💡 A pyramid holds exactly one third of the volume of a box with the same base and height. Fill a pyramid with water, pour it into the box — it only fills one third!',
+    ],
+    label:  (v) => `Pyramid  b=${v.b}cm  h=${v.h}cm`,
+    result: (v) => { const b=+v.b,h=+v.h; return `V=${((1/3)*b*b*h).toFixed(1)}cm³  Base=${(b*b).toFixed(1)}cm²`; },
+  },
+
+  torus: {
+    name: 'Torus', icon: '🍩', color: '#8B5CF6',
+    inputs: [
+      { key:'R', label:'Major Radius (cm)', placeholder:'5' },
+      { key:'r', label:'Minor Radius (cm)', placeholder:'2' },
+    ],
+    aframe: (v) => `<a-torus radius="${v.R*0.1}" radius-tubular="${v.r*0.1}" color="#8B5CF6" opacity="0.85" position="0 0.5 0"></a-torus>`,
+    stats: (v) => {
+      const R=+v.R, r=+v.r, pi=Math.PI;
+      return [
+        { label:'Major R',      value: R,                           unit:'cm'  },
+        { label:'Minor r',      value: r,                           unit:'cm'  },
+        { label:'Volume',       value: (2*pi*pi*R*r*r).toFixed(2), unit:'cm³' },
+        { label:'Surface Area', value: (4*pi*pi*R*r).toFixed(2),   unit:'cm²' },
+        { label:'Outer Radius', value: (R+r).toFixed(2),           unit:'cm'  },
+        { label:'Inner Radius', value: Math.abs(R-r).toFixed(2),   unit:'cm'  },
+      ];
+    },
+    formulas: (v) => {
+      const R=+v.R, r=+v.r, pi=Math.PI;
+      return [
+        { title:'Volume — Pappus Theorem', formula:`V = 2π²Rr² = 2×π²×${R}×${r}²`, result:`= ${(2*pi*pi*R*r*r).toFixed(2)} cm³` },
+        { title:'Surface Area',            formula:`SA = 4π²Rr = 4×π²×${R}×${r}`,  result:`= ${(4*pi*pi*R*r).toFixed(2)} cm²` },
+        { title:'Outer Diameter',          formula:`d = 2(R+r) = 2×(${R}+${r})`,   result:`= ${(2*(R+r)).toFixed(2)} cm` },
+        { title:'Inner Diameter',          formula:`d = 2(R-r) = 2×(${R}-${r})`,   result:`= ${(2*Math.abs(R-r)).toFixed(2)} cm` },
+      ];
+    },
+    facts: [
+      '💡 A torus is a 3D ring shape — like a lifesaver candy or a swimming ring. It is made by rotating a circle around an axis.',
+      '💡 Bicycle tires, car tires, and even Saturn\'s rings are all examples of torus shapes found in real life.',
+      '💡 The torus has two measurements — the major radius R is how wide the whole ring is, and the minor radius r is how thick the ring itself is.',
+    ],
+    label:  (v) => `Torus  R=${v.R}cm  r=${v.r}cm`,
+    result: (v) => { const R=+v.R,r=+v.r,pi=Math.PI; return `V=${(2*pi*pi*R*r*r).toFixed(1)}cm³  SA=${(4*pi*pi*R*r).toFixed(1)}cm²`; },
+  },
+
+  rectangle: {
+    name: 'Cuboid', icon: '🟥', color: '#EF4444',
+    inputs: [
+      { key:'l', label:'Length (cm)', placeholder:'8' },
+      { key:'w', label:'Width (cm)',  placeholder:'5' },
+      { key:'h', label:'Height (cm)', placeholder:'4' },
+    ],
+    aframe: (v) => `<a-box width="${v.l*0.1}" height="${v.h*0.1}" depth="${v.w*0.1}" color="#EF4444" opacity="0.85" position="0 0.5 0"></a-box>`,
+    stats: (v) => {
+      const l=+v.l, w=+v.w, h=+v.h;
+      return [
+        { label:'Length',       value: l,                                    unit:'cm'  },
+        { label:'Width',        value: w,                                    unit:'cm'  },
+        { label:'Height',       value: h,                                    unit:'cm'  },
+        { label:'Volume',       value: (l*w*h).toFixed(2),                   unit:'cm³' },
+        { label:'Surface Area', value: (2*(l*w+l*h+w*h)).toFixed(2),        unit:'cm²' },
+        { label:'Diagonal',     value: Math.sqrt(l*l+w*w+h*h).toFixed(2),   unit:'cm'  },
+      ];
+    },
+    formulas: (v) => {
+      const l=+v.l, w=+v.w, h=+v.h;
+      return [
+        { title:'Volume',                   formula:`V = l×w×h = ${l}×${w}×${h}`,                               result:`= ${(l*w*h).toFixed(2)} cm³` },
+        { title:'Surface Area',             formula:`SA = 2(lw+lh+wh) = 2(${l*w}+${l*h}+${w*h})`,              result:`= ${(2*(l*w+l*h+w*h)).toFixed(2)} cm²` },
+        { title:'Space Diagonal — 3D Pythagoras!', formula:`d = √(l²+w²+h²) = √(${l}²+${w}²+${h}²)`,         result:`= ${Math.sqrt(l*l+w*w+h*h).toFixed(2)} cm` },
+        { title:'Face Diagonal',            formula:`d_f = √(l²+w²) = √(${l}²+${w}²)`,                         result:`= ${Math.sqrt(l*l+w*w).toFixed(2)} cm` },
+      ];
+    },
+    facts: [
+      '💡 A cuboid is like a cube but its sides can be different lengths. It has 6 flat faces, 12 edges, and 8 corners.',
+      '💡 Almost every box you have ever seen — a shoebox, a cereal box, a phone box — is a cuboid shape!',
+      '💡 To find the longest distance inside a cuboid (from corner to corner) we use 3D Pythagoras — the triangle formula extended into 3 dimensions!',
+    ],
+    label:  (v) => `Cuboid  ${v.l}×${v.w}×${v.h}cm`,
+    result: (v) => { const l=+v.l,w=+v.w,h=+v.h; return `V=${(l*w*h).toFixed(1)}cm³  SA=${(2*(l*w+l*h+w*h)).toFixed(1)}cm²`; },
+  },
+
+  prism: {
+    name: 'Tri. Prism', icon: '🔷', color: '#06B6D4',
+    inputs: [
+      { key:'a', label:'Triangle Base (cm)',   placeholder:'6' },
+      { key:'b', label:'Triangle Height (cm)', placeholder:'5' },
+      { key:'l', label:'Prism Length (cm)',    placeholder:'9' },
+    ],
+    aframe: (v) => `<a-cylinder radius="${v.a*0.06}" height="${v.l*0.1}" color="#06B6D4" opacity="0.85" segments-radial="3" position="0 0.5 0"></a-cylinder>`,
+    stats: (v) => {
+      const a=+v.a, b=+v.b, l=+v.l;
+      const triArea=0.5*a*b, hyp=Math.sqrt(a*a+b*b);
+      return [
+        { label:'Base',         value: a,                      unit:'cm'  },
+        { label:'Tri Height',   value: b,                      unit:'cm'  },
+        { label:'Length',       value: l,                      unit:'cm'  },
+        { label:'Volume',       value: (triArea*l).toFixed(2), unit:'cm³' },
+        { label:'Triangle Area',value: triArea.toFixed(2),    unit:'cm²' },
+        { label:'Hypotenuse',   value: hyp.toFixed(2),        unit:'cm'  },
+      ];
+    },
+    formulas: (v) => {
+      const a=+v.a, b=+v.b, l=+v.l;
+      const triArea=0.5*a*b, hyp=Math.sqrt(a*a+b*b);
+      return [
+        { title:'Triangle Area',            formula:`A = (1/2)×b×h = (1/2)×${a}×${b}`,          result:`= ${triArea.toFixed(2)} cm²` },
+        { title:'Hypotenuse — Pythagoras!', formula:`c = √(a²+b²) = √(${a}²+${b}²)`,            result:`= ${hyp.toFixed(2)} cm` },
+        { title:'Volume',                   formula:`V = A×l = ${triArea.toFixed(2)}×${l}`,      result:`= ${(triArea*l).toFixed(2)} cm³` },
+        { title:'Surface Area',             formula:`SA = 2A + (a+b+c)×l`,                       result:`= ${(2*triArea+(a+b+hyp)*l).toFixed(2)} cm²` },
+      ];
+    },
+    facts: [
+      '💡 A triangular prism has 5 faces — 2 triangles on the ends and 3 rectangles on the sides. It is one of the most common 3D shapes in architecture.',
+      '💡 When sunlight passes through a glass triangular prism it splits into all the colors of the rainbow. This is exactly how rainbows form in the sky!',
+      '💡 The area of the triangle at each end is calculated using: Area = ½ × base × height. This is one of the most important formulas in all of geometry!',
+    ],
+    label:  (v) => `Prism  b=${v.a}  h=${v.b}  l=${v.l}cm`,
+    result: (v) => { const a=+v.a,b=+v.b,l=+v.l; return `V=${(0.5*a*b*l).toFixed(1)}cm³  A=${(0.5*a*b).toFixed(1)}cm²`; },
+  },
+};
+
+// store which shape the user picked and what values they typed
+let selectedShape = null;
+let inputValues   = {};
+
+// step 1: user picks a shape from the grid
+function selectShape(key) {
+  selectedShape = key;
+  const shape = SHAPES[key];
+
+  // fill in the shape name and icon at the top
+  document.getElementById('dimIcon').textContent  = shape.icon;
+  document.getElementById('dimTitle').textContent = shape.name;
+
+  // build the input fields based on what this shape needs
+  const inputsDiv = document.getElementById('dimInputs');
+  inputsDiv.innerHTML = '';
+  shape.inputs.forEach(inp => {
+    inputsDiv.innerHTML += `
+      <div class="input-group">
+        <label>${inp.label}</label>
+        <input type="number" id="inp-${inp.key}" placeholder="${inp.placeholder}" min="0.1" step="0.1" inputmode="decimal"/>
+      </div>
+    `;
+  });
+
+  // show a preview of the formulas so the user knows what will be calculated
+  const defaults = {};
+  shape.inputs.forEach(inp => { defaults[inp.key] = inp.placeholder; });
+  document.getElementById('formulaPreview').innerHTML =
+    '<strong style="color:var(--orange);font-size:11px;letter-spacing:1px">FORMULAS FOR THIS SHAPE</strong><br/><br/>' +
+    shape.formulas(defaults).map(f => `${f.title}: ${f.formula}`).join('<br/>');
+
+  // hide the picker and show the dimension input screen
+  document.getElementById('shapePicker').style.display = 'none';
+  document.getElementById('dimPanel').style.display    = 'flex';
+}
+
+// go back to the shape picker
+function goBack() {
+  document.getElementById('dimPanel').style.display    = 'none';
+  document.getElementById('shapePicker').style.display = 'flex';
+}
+
+// step 2: user taps launch — create the 3d shape in AR
+function launchShape() {
+  const shape = SHAPES[selectedShape];
+
+  // read all the values the user typed in
+  inputValues = {};
+  let valid = true;
+  shape.inputs.forEach(inp => {
+    const val = parseFloat(document.getElementById('inp-'+inp.key).value);
+    if (!val || val <= 0) valid = false;
+    inputValues[inp.key] = val || +inp.placeholder;
+  });
+
+  if (!valid) {
+    alert('Please enter valid numbers for all dimensions!');
+    return;
+  }
+
+  // inject the 3d shape html into the AR marker
+  document.getElementById('shapeEntity').innerHTML = shape.aframe(inputValues);
+
+  // calculate how tall the shape is so we can put text above it
+  let shapeHeight = 0.5;
+  const v = inputValues;
+  if (selectedShape === 'cube')      shapeHeight = +v.a * 0.1;
+  if (selectedShape === 'sphere')    shapeHeight = +v.r * 0.1;
+  if (selectedShape === 'cylinder')  shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'cone')      shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'pyramid')   shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'torus')     shapeHeight = +v.r * 0.1;
+  if (selectedShape === 'rectangle') shapeHeight = +v.h * 0.1;
+  if (selectedShape === 'prism')     shapeHeight = +v.l * 0.1;
+
+  // text starts just above the shape top
+  const textBase = 0.5 + shapeHeight + 0.15;
+
+  // set each text label above the shape with spacing between them
+  document.getElementById('shapeLabel').setAttribute('position',  `0 ${(textBase + 0.4).toFixed(2)} 0`);
+  document.getElementById('dimLabel').setAttribute('position',    `0 ${(textBase + 0.2).toFixed(2)} 0`);
+  document.getElementById('resultLabel').setAttribute('position', `0 ${textBase.toFixed(2)} 0`);
+
+  // update the text values
+  document.getElementById('shapeLabel').setAttribute('value', shape.name);
+  document.getElementById('dimLabel').setAttribute('value', shape.label(inputValues));
+  document.getElementById('resultLabel').setAttribute('value', shape.result(inputValues));
+
+  // reset rotation so new shape starts fresh
+  currentRotX = 0;
+  currentRotY = 0;
+
+  // hide the input screen, show the bottom info panel
+  document.getElementById('dimPanel').style.display   = 'none';
+  document.getElementById('infoPanel').style.display  = 'block';
+
+  // fill in the stats, formulas and facts
+  buildInfoPanel();
+}
+
+// build all the content inside the bottom panel
+function buildInfoPanel() {
+  const shape = SHAPES[selectedShape];
+  const v = inputValues;
+
+  // build the stat cards
+  const stats = shape.stats(v);
+  document.getElementById('statGrid').innerHTML = stats.map(s => `
+    <div class="stat-card">
+      <div class="stat-label">${s.label}</div>
+      <div class="stat-value">${s.value} <span class="stat-unit">${s.unit}</span></div>
+    </div>
+  `).join('');
+
+  // build the step by step formula cards
+  document.getElementById('formulaSteps').innerHTML = shape.formulas(v).map(f => `
+    <div class="formula-step">
+      <div class="step-title">${f.title}</div>
+      <div class="step-formula">${f.formula}</div>
+      <div class="step-result">✓ ${f.result}</div>
+    </div>
+  `).join('');
+
+  // build the fun fact cards
+  document.getElementById('factCards').innerHTML = shape.facts.map(f => `
+    <div class="fact-card">${f}</div>
+  `).join('');
+}
+
+// go back to pick a different shape
+function changeShape() {
+  // clear the AR scene
+  document.getElementById('shapeEntity').innerHTML = '';
+  document.getElementById('shapeLabel').setAttribute('value', '');
+  document.getElementById('dimLabel').setAttribute('value', '');
+  document.getElementById('resultLabel').setAttribute('value', '');
+  document.getElementById('infoPanel').style.display  = 'none';
+  document.getElementById('shapePicker').style.display = 'flex';
+}
+
+// switch between the stats, formulas, and facts tabs
+function showTab(name, btn) {
+  document.querySelectorAll('.info-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.info-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+}
+
+// touch spin — lets user drag finger to rotate the shape
+// when the user touches the AR canvas and drags, we rotate the shape entity
+let touchStartX = 0;
+let touchStartY = 0;
+let isDragging  = false;
+let currentRotY = 0; // current Y rotation of the shape
+let currentRotX = 0; // current X rotation of the shape
+
+// when finger touches the screen (but not on the UI panels)
+document.addEventListener('touchstart', e => {
+  // ignore if touch is on the UI (bottom panel, top bar)
+  if (e.target.closest('#btm') || e.target.closest('.topbar') ||
+      e.target.closest('#shapePicker') || e.target.closest('#dimPanel')) return;
+
+  isDragging  = true;
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+// when finger moves, rotate the shape based on how far the finger moved
+document.addEventListener('touchmove', e => {
+  if (!isDragging) return;
+
+  const dx = e.touches[0].clientX - touchStartX; // how far left/right
+  const dy = e.touches[0].clientY - touchStartY; // how far up/down
+
+  // left/right drag rotates around Y axis
+  // up/down drag rotates around X axis
+  currentRotY += dx * 0.5;
+  currentRotX += dy * 0.5;
+
+  // apply the rotation to the shape entity
+  const entity = document.getElementById('shapeEntity');
+  if (entity) {
+    entity.setAttribute('rotation', `${currentRotX} ${currentRotY} 0`);
+
+    // also stop the auto-spin animation when user takes control
+    const shape = entity.querySelector('[animation]');
+    if (shape) shape.removeAttribute('animation');
+  }
+
+  // update start position for next move event
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+
+// when finger lifts, stop dragging
+document.addEventListener('touchend', () => {
+  isDragging = false;
+});
+
+// update the marker detection pill in the top bar
+document.addEventListener('DOMContentLoaded', () => {
+  const marker = document.getElementById('hiroMarker');
+  const pill   = document.getElementById('markerPill');
+
+  // turn the pill green when the hiro marker is detected
+  marker.addEventListener('markerFound', () => {
+    pill.textContent = '✓ Marker detected!';
+    pill.classList.add('found');
+  });
+
+  // go back to default when marker is lost
+  marker.addEventListener('markerLost', () => {
+    pill.textContent = '🔍 Point at Hiro';
+    pill.classList.remove('found');
+  });
+});
+
+// wait for everything to load then force the camera video to fill the screen
+// ar.js creates the video element dynamically so we check every 100ms until it appears
+window.addEventListener('load', () => {
+  const check = setInterval(() => {
+    const v = document.querySelector('video');
+    if (v) {
+      // video goes behind the 3D canvas
+      v.style.width     = '100vw';
+      v.style.height    = '100vh';
+      v.style.objectFit = 'cover';
+      v.style.position  = 'fixed';
+      v.style.top       = '0';
+      v.style.left      = '0';
+      v.style.zIndex    = '0';
+      clearInterval(check);
+    }
+  }, 100);
+
+  // force the AR canvas to sit above the video
+  const checkCanvas = setInterval(() => {
+    // ar.js creates a canvas for rendering the 3D shapes
+    // we need it above the video (z-index 1) but below the UI (z-index 10)
+    const allCanvases = document.querySelectorAll('canvas');
+    if (allCanvases.length > 0) {
+      allCanvases.forEach(c => {
+        c.style.position = 'fixed';
+        c.style.top      = '0';
+        c.style.left     = '0';
+        c.style.zIndex   = '1';
+      });
+      clearInterval(checkCanvas);
+    }
+  }, 100);
+});
+</script>
+</body>
+</html>
