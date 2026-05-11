@@ -335,6 +335,88 @@
       line-height: 1.6;
     }
 
+    .quiz-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .quiz-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 10px;
+      background: rgba(255,255,255,0.03);
+    }
+
+    .quiz-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .quiz-prompt {
+      font-size: 13px;
+      line-height: 1.7;
+      margin-bottom: 10px;
+    }
+
+    .quiz-input {
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      outline: none;
+      margin-bottom: 8px;
+    }
+    .quiz-input:focus { border-color: var(--cyan); }
+
+    .quiz-submit {
+      width: 100%;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 10px;
+      font-family: 'Syne', sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .quiz-feedback {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      margin-top: 8px;
+      min-height: 18px;
+      color: var(--muted);
+    }
+
+    .quiz-feedback.ok { color: var(--green); }
+    .quiz-feedback.bad { color: var(--red); }
+    .quiz-feedback.warn { color: var(--yellow); }
+
+    .quiz-summary {
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.35);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.7;
+      display: none;
+      margin-top: 10px;
+    }
+
     /* back button at bottom of stats */
     .change-btn {
       width: 100%; margin-top: 10px;
@@ -398,9 +480,10 @@
   <!-- info panel shown after a shape is launched -->
   <div id="infoPanel" style="display:none">
     <div class="info-tabs">
-      <button class="info-tab active" onclick="showTab('stats',this)">📊 Stats</button>
-      <button class="info-tab"        onclick="showTab('formulas',this)">📐 Formulas</button>
-      <button class="info-tab"        onclick="showTab('facts',this)">💡 Facts</button>
+      <button class="info-tab active" data-tab="stats" onclick="showTab('stats',this)">📊 Stats</button>
+      <button class="info-tab"        data-tab="formulas" onclick="showTab('formulas',this)">📐 Formulas</button>
+      <button class="info-tab"        data-tab="facts" onclick="showTab('facts',this)">💡 Facts</button>
+      <button class="info-tab"        data-tab="quiz" onclick="showTab('quiz',this)">🧠 Quiz</button>
     </div>
     <div class="info-pane active" id="tab-stats">
       <div class="stat-grid" id="statGrid"></div>
@@ -411,6 +494,19 @@
     </div>
     <div class="info-pane" id="tab-facts">
       <div id="factCards"></div>
+    </div>
+    <div class="info-pane" id="tab-quiz">
+      <div class="quiz-head">
+        <div class="quiz-pill" id="quizProgress">Question 0/0</div>
+        <div class="quiz-pill" id="quizTimer">Time: 00:00</div>
+      </div>
+      <div class="quiz-card">
+        <div class="quiz-prompt" id="quizPrompt">Open the quiz tab to start.</div>
+        <input class="quiz-input" id="quizAnswer" type="number" step="0.01" inputmode="decimal" placeholder="Type your answer"/>
+        <button class="quiz-submit" id="quizSubmitBtn" onclick="submitQuizAnswer()">Submit Answer</button>
+        <div class="quiz-feedback" id="quizFeedback"></div>
+      </div>
+      <div class="quiz-summary" id="quizSummary"></div>
     </div>
   </div>
 
@@ -484,6 +580,18 @@
 
 
 <script>
+function randomInt(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function round2(n) {
+  return Number(n.toFixed(2));
+}
+
+function makeQuestion(prompt, answer, unit) {
+  return { prompt, answer: round2(answer), unit };
+}
+
 // all 8 shapes defined here with their math and AR appearance
 const SHAPES = {
 
@@ -520,6 +628,14 @@ const SHAPES = {
       '💡 A Rubik\'s Cube is a famous cube puzzle. Even though it looks simple, it has more than 43 quintillion possible combinations!',
       '💡 Ice cubes, dice, and sugar cubes are all examples of cubes you see every day. The cube is one of the strongest shapes in nature.',
     ],
+    quiz: () => {
+      const a = randomInt(2, 12);
+      const q = [
+        makeQuestion(`A cube has side length ${a} cm. What is its volume?`, a*a*a, 'cm³'),
+        makeQuestion(`A cube has side length ${a} cm. What is its surface area?`, 6*a*a, 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Cube  a = ${v.a}cm`,
     result: (v) => { const a=+v.a; return `V=${Math.pow(a,3).toFixed(1)}cm³  SA=${(6*a*a).toFixed(1)}cm²`; },
   },
@@ -553,6 +669,15 @@ const SHAPES = {
       '💡 Soap bubbles are always round because a sphere uses the least amount of surface to hold the most air inside.',
       '💡 The Earth, the Sun, and all the planets are shaped like spheres. Gravity pulls everything into this round shape!',
     ],
+    quiz: () => {
+      const r = randomInt(2, 10);
+      const pi = Math.PI;
+      const q = [
+        makeQuestion(`A sphere has radius ${r} cm. What is its volume (use pi)?`, (4/3)*pi*r*r*r, 'cm³'),
+        makeQuestion(`A sphere has radius ${r} cm. What is its surface area (use pi)?`, 4*pi*r*r, 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Sphere  r = ${v.r}cm`,
     result: (v) => { const r=+v.r,pi=Math.PI; return `V=${((4/3)*pi*r*r*r).toFixed(1)}cm³  SA=${(4*pi*r*r).toFixed(1)}cm²`; },
   },
@@ -589,6 +714,16 @@ const SHAPES = {
       '💡 Cans of food, batteries, and candles are all cylinders. Engineers use this shape because it is very strong and easy to stack.',
       '💡 If you roll a flat rectangle into a tube, you get the curved side of a cylinder. Try it with a piece of paper!',
     ],
+    quiz: () => {
+      const r = randomInt(2, 8);
+      const h = randomInt(3, 15);
+      const pi = Math.PI;
+      const q = [
+        makeQuestion(`A cylinder has radius ${r} cm and height ${h} cm. What is its volume?`, pi*r*r*h, 'cm³'),
+        makeQuestion(`A cylinder has radius ${r} cm and height ${h} cm. What is its total surface area?`, 2*pi*r*(r+h), 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Cylinder  r=${v.r}cm  h=${v.h}cm`,
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI; return `V=${(pi*r*r*h).toFixed(1)}cm³  SA=${(2*pi*r*(r+h)).toFixed(1)}cm²`; },
   },
@@ -625,6 +760,17 @@ const SHAPES = {
       '💡 Ice cream cones, party hats, and traffic cones are all real-life examples of this shape!',
       '💡 To find the slant height of a cone we use the Pythagorean theorem — the same formula used in right triangles. Math connects everything!',
     ],
+    quiz: () => {
+      const r = randomInt(2, 8);
+      const h = randomInt(3, 14);
+      const pi = Math.PI;
+      const l = Math.sqrt(r*r + h*h);
+      const q = [
+        makeQuestion(`A cone has radius ${r} cm and height ${h} cm. What is its volume?`, (1/3)*pi*r*r*h, 'cm³'),
+        makeQuestion(`A cone has radius ${r} cm and height ${h} cm. What is its slant height?`, l, 'cm'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Cone  r=${v.r}cm  h=${v.h}cm`,
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI,l=Math.sqrt(r*r+h*h); return `V=${((1/3)*pi*r*r*h).toFixed(1)}cm³  l=${l.toFixed(1)}cm`; },
   },
@@ -661,6 +807,15 @@ const SHAPES = {
       '💡 The Great Pyramid of Giza in Egypt was built over 4,500 years ago and was the tallest building in the world for almost 4,000 years!',
       '💡 A pyramid holds exactly one third of the volume of a box with the same base and height. Fill a pyramid with water, pour it into the box — it only fills one third!',
     ],
+    quiz: () => {
+      const b = randomInt(3, 12);
+      const h = randomInt(3, 16);
+      const q = [
+        makeQuestion(`A square pyramid has base side ${b} cm and height ${h} cm. What is its volume?`, (1/3)*b*b*h, 'cm³'),
+        makeQuestion(`A square pyramid has base side ${b} cm. What is its base area?`, b*b, 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Pyramid  b=${v.b}cm  h=${v.h}cm`,
     result: (v) => { const b=+v.b,h=+v.h; return `V=${((1/3)*b*b*h).toFixed(1)}cm³  Base=${(b*b).toFixed(1)}cm²`; },
   },
@@ -697,6 +852,16 @@ const SHAPES = {
       '💡 Bicycle tires, car tires, and even Saturn\'s rings are all examples of torus shapes found in real life.',
       '💡 The torus has two measurements — the major radius R is how wide the whole ring is, and the minor radius r is how thick the ring itself is.',
     ],
+    quiz: () => {
+      const R = randomInt(4, 12);
+      const r = randomInt(2, Math.max(2, R - 1));
+      const pi = Math.PI;
+      const q = [
+        makeQuestion(`A torus has major radius R=${R} cm and minor radius r=${r} cm. What is its volume?`, 2*pi*pi*R*r*r, 'cm³'),
+        makeQuestion(`A torus has major radius R=${R} cm and minor radius r=${r} cm. What is its surface area?`, 4*pi*pi*R*r, 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Torus  R=${v.R}cm  r=${v.r}cm`,
     result: (v) => { const R=+v.R,r=+v.r,pi=Math.PI; return `V=${(2*pi*pi*R*r*r).toFixed(1)}cm³  SA=${(4*pi*pi*R*r).toFixed(1)}cm²`; },
   },
@@ -734,6 +899,16 @@ const SHAPES = {
       '💡 Almost every box you have ever seen — a shoebox, a cereal box, a phone box — is a cuboid shape!',
       '💡 To find the longest distance inside a cuboid (from corner to corner) we use 3D Pythagoras — the triangle formula extended into 3 dimensions!',
     ],
+    quiz: () => {
+      const l = randomInt(3, 14);
+      const w = randomInt(2, 10);
+      const h = randomInt(2, 10);
+      const q = [
+        makeQuestion(`A cuboid has l=${l} cm, w=${w} cm, h=${h} cm. What is its volume?`, l*w*h, 'cm³'),
+        makeQuestion(`A cuboid has l=${l} cm, w=${w} cm, h=${h} cm. What is its surface area?`, 2*(l*w + l*h + w*h), 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Cuboid  ${v.l}×${v.w}×${v.h}cm`,
     result: (v) => { const l=+v.l,w=+v.w,h=+v.h; return `V=${(l*w*h).toFixed(1)}cm³  SA=${(2*(l*w+l*h+w*h)).toFixed(1)}cm²`; },
   },
@@ -773,6 +948,17 @@ const SHAPES = {
       '💡 When sunlight passes through a glass triangular prism it splits into all the colors of the rainbow. This is exactly how rainbows form in the sky!',
       '💡 The area of the triangle at each end is calculated using: Area = ½ × base × height. This is one of the most important formulas in all of geometry!',
     ],
+    quiz: () => {
+      const a = randomInt(3, 12);
+      const b = randomInt(3, 10);
+      const l = randomInt(4, 14);
+      const triArea = 0.5 * a * b;
+      const q = [
+        makeQuestion(`A triangular prism has triangle base ${a} cm, triangle height ${b} cm, and prism length ${l} cm. What is its volume?`, triArea*l, 'cm³'),
+        makeQuestion(`A triangle has base ${a} cm and height ${b} cm. What is its area?`, triArea, 'cm²'),
+      ];
+      return q[randomInt(0, q.length - 1)];
+    },
     label:  (v) => `Prism  b=${v.a}  h=${v.b}  l=${v.l}cm`,
     result: (v) => { const a=+v.a,b=+v.b,l=+v.l; return `V=${(0.5*a*b*l).toFixed(1)}cm³  A=${(0.5*a*b).toFixed(1)}cm²`; },
   },
@@ -781,10 +967,161 @@ const SHAPES = {
 // store which shape the user picked and what values they typed
 let selectedShape = null;
 let inputValues   = {};
+let quizQuestions = [];
+let quizIndex = 0;
+let quizScore = 0;
+let timeLeft = 0;
+let timerId = null;
+let quizStarted = false;
+let quizFinished = false;
+
+const QUIZ_TOTAL_QUESTIONS = 5;
+const QUIZ_SECONDS = 90;
+const ANSWER_TOLERANCE = 0.05;
+
+function formatTime(totalSeconds) {
+  const m = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const s = String(totalSeconds % 60).padStart(2, '0');
+  return `${m}:${s}`;
+}
+
+function setQuizFeedback(message, tone) {
+  const feedback = document.getElementById('quizFeedback');
+  feedback.textContent = message;
+  feedback.className = `quiz-feedback ${tone || ''}`.trim();
+}
+
+function resetQuizState() {
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+  quizQuestions = [];
+  quizIndex = 0;
+  quizScore = 0;
+  timeLeft = QUIZ_SECONDS;
+  quizStarted = false;
+  quizFinished = false;
+
+  document.getElementById('quizProgress').textContent = `Question 0/${QUIZ_TOTAL_QUESTIONS}`;
+  document.getElementById('quizTimer').textContent = `Time: ${formatTime(QUIZ_SECONDS)}`;
+  document.getElementById('quizPrompt').textContent = 'Open the quiz tab to start.';
+  document.getElementById('quizAnswer').value = '';
+  document.getElementById('quizAnswer').disabled = false;
+  document.getElementById('quizSubmitBtn').disabled = false;
+  setQuizFeedback('', '');
+
+  const summary = document.getElementById('quizSummary');
+  summary.style.display = 'none';
+  summary.innerHTML = '';
+}
+
+function generateQuizQuestions() {
+  const shape = SHAPES[selectedShape];
+  quizQuestions = [];
+  for (let i = 0; i < QUIZ_TOTAL_QUESTIONS; i++) {
+    quizQuestions.push(shape.quiz());
+  }
+}
+
+function renderQuizQuestion() {
+  if (quizFinished) return;
+  const q = quizQuestions[quizIndex];
+  document.getElementById('quizProgress').textContent = `Question ${quizIndex + 1}/${QUIZ_TOTAL_QUESTIONS}`;
+  document.getElementById('quizPrompt').textContent = q.prompt;
+  document.getElementById('quizAnswer').value = '';
+  setQuizFeedback('', '');
+}
+
+function finishQuiz(reason) {
+  if (quizFinished) return;
+  quizFinished = true;
+  if (timerId) clearInterval(timerId);
+  timerId = null;
+
+  document.getElementById('quizAnswer').disabled = true;
+  document.getElementById('quizSubmitBtn').disabled = true;
+  document.getElementById('quizProgress').textContent = `Question ${Math.min(quizIndex, QUIZ_TOTAL_QUESTIONS)}/${QUIZ_TOTAL_QUESTIONS}`;
+
+  const usedSeconds = QUIZ_SECONDS - timeLeft;
+  const summary = document.getElementById('quizSummary');
+  summary.innerHTML =
+    `<strong>Quiz Complete!</strong><br/>` +
+    `Score: ${quizScore}/${QUIZ_TOTAL_QUESTIONS}<br/>` +
+    `Reason: ${reason}<br/>` +
+    `Time used: ${formatTime(usedSeconds)} / ${formatTime(QUIZ_SECONDS)}`;
+  summary.style.display = 'block';
+}
+
+function startQuiz() {
+  if (quizStarted || !selectedShape) return;
+  quizStarted = true;
+  timeLeft = QUIZ_SECONDS;
+  generateQuizQuestions();
+  document.getElementById('quizTimer').textContent = `Time: ${formatTime(timeLeft)}`;
+  renderQuizQuestion();
+
+  timerId = setInterval(() => {
+    timeLeft -= 1;
+    if (timeLeft < 0) timeLeft = 0;
+    document.getElementById('quizTimer').textContent = `Time: ${formatTime(timeLeft)}`;
+    if (timeLeft <= 0) {
+      setQuizFeedback('Time is up.', 'warn');
+      finishQuiz('Time up');
+    }
+  }, 1000);
+}
+
+function submitQuizAnswer() {
+  if (!quizStarted) startQuiz();
+  if (quizFinished) return;
+
+  const raw = document.getElementById('quizAnswer').value.trim();
+  if (!raw) {
+    setQuizFeedback('Please type a numeric answer first.', 'warn');
+    return;
+  }
+
+  const userAnswer = parseFloat(raw);
+  if (Number.isNaN(userAnswer)) {
+    setQuizFeedback('Answer must be a number.', 'warn');
+    return;
+  }
+
+  const q = quizQuestions[quizIndex];
+  const isCorrect = Math.abs(userAnswer - q.answer) <= ANSWER_TOLERANCE;
+  if (isCorrect) {
+    quizScore += 1;
+    setQuizFeedback('Correct!', 'ok');
+  } else {
+    setQuizFeedback(`Incorrect. Correct answer: ${q.answer} ${q.unit}`, 'bad');
+  }
+
+  quizIndex += 1;
+  if (quizIndex >= QUIZ_TOTAL_QUESTIONS) {
+    finishQuiz('All questions answered');
+    return;
+  }
+
+  setTimeout(() => {
+    if (!quizFinished) renderQuizQuestion();
+  }, 550);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const quizInput = document.getElementById('quizAnswer');
+  if (quizInput) {
+    quizInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitQuizAnswer();
+      }
+    });
+  }
+});
 
 // step 1: user picks a shape from the grid
 function selectShape(key) {
   selectedShape = key;
+  resetQuizState();
   const shape = SHAPES[key];
 
   // fill in the shape name and icon at the top
@@ -817,6 +1154,7 @@ function selectShape(key) {
 
 // go back to the shape picker
 function goBack() {
+  resetQuizState();
   document.getElementById('dimPanel').style.display    = 'none';
   document.getElementById('shapePicker').style.display = 'flex';
 }
@@ -877,6 +1215,7 @@ function launchShape() {
 
   // fill in the stats, formulas and facts
   buildInfoPanel();
+  showTab('stats');
 }
 
 // build all the content inside the bottom panel
@@ -910,6 +1249,7 @@ function buildInfoPanel() {
 
 // go back to pick a different shape
 function changeShape() {
+  resetQuizState();
   // clear the AR scene
   document.getElementById('shapeEntity').innerHTML = '';
   document.getElementById('shapeLabel').setAttribute('value', '');
@@ -924,7 +1264,9 @@ function showTab(name, btn) {
   document.querySelectorAll('.info-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.info-tab').forEach(b => b.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
-  btn.classList.add('active');
+  const tabBtn = btn || document.querySelector(`.info-tab[data-tab="${name}"]`);
+  if (tabBtn) tabBtn.classList.add('active');
+  if (name === 'quiz' && !quizStarted) startQuiz();
 }
 
 // touch spin — lets user drag finger to rotate the shape
