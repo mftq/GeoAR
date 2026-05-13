@@ -307,6 +307,8 @@
 
     /* MCQ choices */
     .quiz-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .quiz-choices.two-choices { grid-template-columns: 1fr 1fr; }
+    .quiz-choices.four-choices { grid-template-columns: 1fr 1fr; }
     .quiz-choice {
       background: rgba(255,255,255,0.05);
       border: 2px solid var(--border);
@@ -450,7 +452,7 @@
       <div class="shape-desc" data-key="descCube">6 equal faces</div>
     </div>
     <div class="shape-card" onclick="selectShape('sphere')">
-      <div class="shape-icon">🔵</div>
+      <div class="shape-icon">🟠</div>
       <div class="shape-name" data-key="shapeSphere">Sphere</div>
       <div class="shape-desc" data-key="descSphere">perfectly round</div>
     </div>
@@ -465,7 +467,7 @@
       <div class="shape-desc" data-key="descCone">pointed apex</div>
     </div>
     <div class="shape-card" onclick="selectShape('pyramid')">
-      <div class="shape-icon">🔺</div>
+      <div class="shape-icon">🏛️</div>
       <div class="shape-name" data-key="shapePyramid">Pyramid</div>
       <div class="shape-desc" data-key="descPyramid">4 triangular faces</div>
     </div>
@@ -480,7 +482,7 @@
       <div class="shape-desc" data-key="descCuboid">3 different sides</div>
     </div>
     <div class="shape-card" onclick="selectShape('prism')">
-      <div class="shape-icon">🔷</div>
+      <div class="shape-icon">🟩</div>
       <div class="shape-name" data-key="shapePrism">Tri. Prism</div>
       <div class="shape-desc" data-key="descPrism">triangle base</div>
     </div>
@@ -602,6 +604,11 @@ function applyLang() {
   // if info panel is open, rebuild it in new language
   if (document.getElementById('infoPanel').style.display !== 'none' && selectedShape) {
     buildInfoPanel();
+    // update AR floating text to new language
+    const shape = SHAPES[selectedShape];
+    document.getElementById('shapeLabel').setAttribute('value', shape.name[currentLang]);
+    document.getElementById('dimLabel').setAttribute('value',   shape.label(inputValues));
+    document.getElementById('resultLabel').setAttribute('value',shape.result(inputValues));
     // if quiz is active, re-render the current question in new language immediately
     if (quizStarted && !quizDone && quizList.length > 0 && quizIndex < quizList.length) {
       renderQuestion();
@@ -665,7 +672,7 @@ function showFeedbackOverlay(isCorrect) {
 // A-Frame 1 unit = 1 meter. We divide cm by 100 to get meters.
 // e.g. 5cm cube → 0.05 units. This keeps proportions perfectly accurate.
 // ─────────────────────────────────────────────
-const CM = 0.02; // scale factor: 1 cm = 0.02 A-Frame units (good visible size)
+const CM = 0.07; // 1 cm = 0.07 A-Frame units — makes shapes visible and proportional
 
 const SHAPES = {
 
@@ -677,7 +684,7 @@ const SHAPES = {
     // cube: width=height=depth=a — perfect cube every time
     aframe: (v) => {
       const s = +v.a * CM;
-      return `<a-box width="${s}" height="${s}" depth="${s}" color="#3B82F6" opacity="0.88" position="0 ${s/2 + 0.5} 0" scale="1 1 1"></a-box>`;
+      return `<a-box width="${s}" height="${s}" depth="${s}" color="#3B82F6" opacity="0.88" position="0 ${(s/2).toFixed(3)} 0" scale="1 1 1"></a-box>`;
     },
     stats: (v) => {
       const a = +v.a;
@@ -719,8 +726,8 @@ const SHAPES = {
         { q:{en:`How many faces does a cube have?`,ar:`كم وجهاً للمكعب؟`}, correct:'6', wrongs:['4','8','12'] },
         { q:{en:`How many edges does a cube have?`,ar:`كم حافة للمكعب؟`}, correct:'12', wrongs:['6','8','10'] },
         { q:{en:`How many corners (vertices) does a cube have?`,ar:`كم زاوية للمكعب؟`}, correct:'8', wrongs:['6','4','12'] },
-        { q:{en:`All faces of a cube are squares. True or False?`,ar:`جميع أوجه المكعب مربعات. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE','Maybe','Only 4'] },
-        { q:{en:`The formula for cube volume is V = a³. True or False?`,ar:`معادلة حجم المكعب هي V = a³. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE','V = 6a²','V = a²'] },
+        { q:{en:`All faces of a cube are squares. True or False?`,ar:`جميع أوجه المكعب مربعات. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE'] },
+        { q:{en:`The formula for cube volume is V = a³. True or False?`,ar:`معادلة حجم المكعب هي V = a³. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE'] },
         { q:{en:`A cube has side ${a} cm. What is the area of ONE face?`,ar:`مكعب ضلعه ${a} سم. ما مساحة وجه واحد؟`}, correct:(a*a).toFixed(0)+' cm²', wrongs:[(a*a*2).toFixed(0)+' cm²',(a*6).toFixed(0)+' cm²',(a*a*a).toFixed(0)+' cm³'] },
       ];
     },
@@ -737,7 +744,7 @@ const SHAPES = {
     // sphere: radius = r — perfectly round in all directions
     aframe: (v) => {
       const r = +v.r * CM;
-      return `<a-sphere radius="${r}" color="#22D3EE" opacity="0.88" position="0 ${r + 0.5} 0" scale="1 1 1"></a-sphere>`;
+      return `<a-sphere radius="${r}" color="#FB923C" opacity="0.88" position="0 ${r.toFixed(3)} 0" scale="1 1 1"></a-sphere>`;
     },
     stats: (v) => {
       const r=+v.r, pi=Math.PI;
@@ -775,7 +782,7 @@ const SHAPES = {
       const r=+v.r||4, pi=Math.PI;
       return [
         { q:{en:`A sphere has radius ${r} cm. What is its surface area? (Use π≈3.14)`,ar:`كرة نصف قطرها ${r} سم. ما مساحة سطحها؟ (استخدم π≈3.14)`}, correct:(4*pi*r*r).toFixed(0)+' cm²', wrongs:[(2*pi*r*r).toFixed(0)+' cm²', ((4/3)*pi*r*r*r).toFixed(0)+' cm³', (pi*r*r).toFixed(0)+' cm²'] },
-        { q:{en:`A sphere has NO edges. True or False?`,ar:`الكرة ليس لها حواف. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE','12 edges','6 faces'] },
+        { q:{en:`A sphere has NO edges. True or False?`,ar:`الكرة ليس لها حواف. صح أم خطأ؟`}, correct:'TRUE', wrongs:['FALSE'] },
         { q:{en:`What formula gives the volume of a sphere?`,ar:'ما معادلة حجم الكرة؟'}, correct:'(4/3)πr³', wrongs:['πr²h','4πr²','(1/3)πr²h'] },
       ];
     },
@@ -793,7 +800,7 @@ const SHAPES = {
     // cylinder: radius = r, height = h — correct proportions
     aframe: (v) => {
       const r=+v.r*CM, h=+v.h*CM;
-      return `<a-cylinder radius="${r}" height="${h}" color="#4ADE80" opacity="0.88" position="0 ${h/2 + 0.5} 0" scale="1 1 1"></a-cylinder>`;
+      return `<a-cylinder radius="${r}" height="${h}" color="#4ADE80" opacity="0.88" position="0 ${(h/2).toFixed(3)} 0" scale="1 1 1"></a-cylinder>`;
     },
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI;
@@ -848,7 +855,7 @@ const SHAPES = {
     ],
     aframe: (v) => {
       const r=+v.r*CM, h=+v.h*CM;
-      return `<a-cone radius-bottom="${r}" radius-top="0.001" height="${h}" color="#FB923C" opacity="0.88" position="0 ${h/2 + 0.5} 0" scale="1 1 1"></a-cone>`;
+      return `<a-cone radius-bottom="${r}" radius-top="0.001" height="${h}" color="#FB923C" opacity="0.88" position="0 ${(h/2).toFixed(3)} 0" scale="1 1 1"></a-cone>`;
     },
     stats: (v) => {
       const r=+v.r, h=+v.h, pi=Math.PI, l=Math.sqrt(r*r+h*h);
@@ -904,7 +911,7 @@ const SHAPES = {
     // 4-sided pyramid using a-cone with segments-radial=4
     aframe: (v) => {
       const b=+v.b*CM*0.7, h=+v.h*CM;
-      return `<a-cone radius-bottom="${b}" radius-top="0.001" height="${h}" color="#FBBF24" opacity="0.88" segments-radial="4" position="0 ${h/2 + 0.5} 0" rotation="0 45 0" scale="1 1 1"></a-cone>`;
+      return `<a-cone radius-bottom="${b}" radius-top="0.001" height="${h}" color="#FBBF24" opacity="0.88" segments-radial="4" position="0 ${(h/2).toFixed(3)} 0" rotation="0 45 0" scale="1 1 1"></a-cone>`;
     },
     stats: (v) => {
       const b=+v.b, h=+v.h, sl=Math.sqrt(h*h+(b/2)*(b/2));
@@ -959,7 +966,7 @@ const SHAPES = {
     ],
     aframe: (v) => {
       const R=+v.R*CM, r=+v.r*CM;
-      return `<a-torus radius="${R}" radius-tubular="${r}" color="#A78BFA" opacity="0.88" position="0 ${r + 0.5} 0" scale="1 1 1"></a-torus>`;
+      return `<a-torus radius="${R}" radius-tubular="${r}" color="#A78BFA" opacity="0.88" position="0 ${r.toFixed(3)} 0" scale="1 1 1"></a-torus>`;
     },
     stats: (v) => {
       const R=+v.R, r=+v.r, pi=Math.PI;
@@ -1016,7 +1023,7 @@ const SHAPES = {
     // cuboid: width=l, depth=w, height=h — all different, preserving exact shape
     aframe: (v) => {
       const l=+v.l*CM, w=+v.w*CM, h=+v.h*CM;
-      return `<a-box width="${l}" height="${h}" depth="${w}" color="#F472B6" opacity="0.88" position="0 ${h/2 + 0.5} 0" scale="1 1 1"></a-box>`;
+      return `<a-box width="${l}" height="${h}" depth="${w}" color="#F472B6" opacity="0.88" position="0 ${(h/2).toFixed(3)} 0" scale="1 1 1"></a-box>`;
     },
     stats: (v) => {
       const l=+v.l, w=+v.w, h=+v.h;
@@ -1072,7 +1079,7 @@ const SHAPES = {
     ],
     aframe: (v) => {
       const r=+v.a*CM*0.6, h=+v.l*CM;
-      return `<a-cylinder radius="${r}" height="${h}" color="#22D3EE" opacity="0.88" segments-radial="3" position="0 ${h/2 + 0.5} 0" scale="1 1 1"></a-cylinder>`;
+      return `<a-cylinder radius="${r}" height="${h}" color="#22D3EE" opacity="0.88" segments-radial="3" position="0 ${(h/2).toFixed(3)} 0" scale="1 1 1"></a-cylinder>`;
     },
     stats: (v) => {
       const a=+v.a, b=+v.b, l=+v.l, tri=0.5*a*b, hyp=Math.sqrt(a*a+b*b);
@@ -1232,15 +1239,15 @@ function launchShape() {
   // inject shape
   document.getElementById('shapeEntity').innerHTML = shape.aframe(inputValues);
 
-  // calculate text position — just slightly above the shape top, never far away
-  const sh = Math.min(shape.shapeH(inputValues), 0.35); // tight cap so text stays close
-  const textBase = 0.5 + sh + 0.08;
+  // text sits just above the shape — shape is no longer floating so we use actual shape height
+  const sh = Math.min(shape.shapeH(inputValues), 0.5);
+  const textBase = sh + 0.1; // just above the top of the shape
 
-  // stack the 3 labels tightly above the shape
   document.getElementById('shapeLabel').setAttribute('position',  `0 ${(textBase + 0.22).toFixed(2)} 0`);
   document.getElementById('dimLabel').setAttribute('position',    `0 ${(textBase + 0.12).toFixed(2)} 0`);
   document.getElementById('resultLabel').setAttribute('position', `0 ${textBase.toFixed(2)} 0`);
 
+  // show text in current language
   document.getElementById('shapeLabel').setAttribute('value',  shape.name[currentLang]);
   document.getElementById('dimLabel').setAttribute('value',    shape.label(inputValues));
   document.getElementById('resultLabel').setAttribute('value', shape.result(inputValues));
@@ -1312,7 +1319,7 @@ function buildChoices(correct, wrongs) {
   const TOKENS = {
     TRUE:        { en:'True',                    ar:'صح'                       },
     FALSE:       { en:'False',                   ar:'خطأ'                      },
-    DIST_CENTER: { en:'Distance from center to tube', ar:'مسافة من المركز للأنبوب' },
+    DIST_CENTER: { en:'Distance from center to tube', ar:'المسافة من المركز للأنبوب' },
     THICK_TUBE:  { en:'Thickness of tube',       ar:'سُمك الأنبوب'             },
     RING_LEN:    { en:'Length of ring',          ar:'طول الحلقة'               },
     HALF_RING:   { en:'Half the ring radius',    ar:'نصف قطر الحلقة'           },
@@ -1321,10 +1328,10 @@ function buildChoices(correct, wrongs) {
     SPHERE_ANS:  { en:'Sphere',                  ar:'الكرة'                    },
     CYLINDER_ANS:{ en:'Cylinder',               ar:'الأسطوانة'                },
   };
-  function display(v) {
-    return TOKENS[v] ? TOKENS[v][currentLang] : v;
-  }
-  const pool = [correct, ...wrongs.slice(0,3)].sort(() => Math.random() - 0.5);
+  function display(v) { return TOKENS[v] ? TOKENS[v][currentLang] : v; }
+
+  // build pool: correct + up to 3 wrongs, then shuffle
+  const pool = [correct, ...wrongs].sort(() => Math.random() - 0.5);
   return pool.map(v => ({ raw: v, label: display(v) }));
 }
 
