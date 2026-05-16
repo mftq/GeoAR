@@ -840,7 +840,7 @@ const SHAPES = {
     aframe: (v) => {
       const unit = visualUnitFor();
       const s = +v.a * unit;
-      return `<a-entity rotation="0 35 0">
+      return `<a-entity rotation="0 10 0">
         <a-box width="${s}" height="${s}" depth="${s}" color="#3B82F6" position="0 ${(s/2).toFixed(3)} 0" scale="1 1 1" shadow="receive:false"></a-box>
       </a-entity>`;
     },
