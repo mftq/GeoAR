@@ -783,13 +783,9 @@ function showFeedbackOverlay(isCorrect) {
 }
 
 // Shape data and 3D models
-// Match the old lab's marker scale directly: 5 cm becomes 0.4 AR units,
-// exactly like the original simple <a-box scale="0.4 0.4 0.4"> example.
 const CM = 0.08;
 
-// Keep shape proportions honest. The earlier non-linear fitting formula made
-// big values shrink at a different rate, so shapes could look less like the
-// simple A-Frame primitives. Now every dimension uses the same fixed cm→AR unit.
+// Keep shape proportions
 function visualUnitFor() {
   return CM;
 }
@@ -836,7 +832,7 @@ const SHAPES = {
     inputs: [
       { key:'a', label:{ en:'Side Length (cm)', ar:'طول الضلع (سم)' }, placeholder:'5' }
     ],
-    // Cube: all sides are the same.
+    // Cube
     aframe: (v) => {
       const unit = visualUnitFor();
       const s = +v.a * unit;
@@ -899,7 +895,7 @@ const SHAPES = {
     inputs: [
       { key:'r', label:{ en:'Radius (cm)', ar:'نصف القطر (سم)' }, placeholder:'4' }
     ],
-    // Sphere: one radius in every direction. No non-uniform scale, so it stays round.
+    // Sphere
     aframe: (v) => {
       const unit = visualUnitFor();
       const r = +v.r * unit;
@@ -961,7 +957,7 @@ const SHAPES = {
       { key:'r', label:{ en:'Radius (cm)',  ar:'نصف القطر (سم)' }, placeholder:'3' },
       { key:'h', label:{ en:'Height (cm)',  ar:'الارتفاع (سم)'  }, placeholder:'8' },
     ],
-    // Cylinder: radius and height use the entered values.
+    // Cylinder
     aframe: (v) => {
       const unit = visualUnitFor();
       const r=+v.r*unit, h=+v.h*unit;
@@ -1017,6 +1013,7 @@ const SHAPES = {
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI; return `V=${(pi*r*r*h).toFixed(1)}cm³`; },
   },
 
+  // Cone
   cone: {
     name: { en: 'Cone', ar: 'مخروط' }, iconClass: 'icon-cone',
     inputs: [
@@ -1078,6 +1075,7 @@ const SHAPES = {
     result: (v) => { const r=+v.r,h=+v.h,pi=Math.PI,l=Math.sqrt(r*r+h*h); return `V=${((1/3)*pi*r*r*h).toFixed(1)}cm³  l=${l.toFixed(1)}cm`; },
   },
 
+  // Pyramid
   pyramid: {
     name: { en: 'Pyramid', ar: 'هرم' }, iconClass: 'icon-pyramid',
     inputs: [
@@ -1140,6 +1138,7 @@ const SHAPES = {
     result: (v) => { const b=+v.b,h=+v.h; return `V=${((1/3)*b*b*h).toFixed(1)}cm³`; },
   },
 
+  // Torus
   torus: {
     name: { en: 'Torus', ar: 'حلقي' }, iconClass: 'icon-torus',
     inputs: [
@@ -1203,6 +1202,7 @@ const SHAPES = {
     result: (v) => { const R=+v.R,r=+v.r,pi=Math.PI; return `V=${(2*pi*pi*R*r*r).toFixed(1)}cm³`; },
   },
 
+  // Cuboid
   rectangle: {
     name: { en: 'Cuboid', ar: 'متوازي مستطيلات' }, iconClass: 'icon-cuboid',
     inputs: [
@@ -1268,6 +1268,7 @@ const SHAPES = {
     result: (v) => { const l=+v.l,w=+v.w,h=+v.h; return `V=${(l*w*h).toFixed(1)}cm³`; },
   },
 
+  // Prism
   prism: {
     name: { en: 'Tri. Prism', ar: 'منشور مثلثي' }, iconClass: 'icon-prism',
     inputs: [
